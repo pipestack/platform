@@ -1,0 +1,35 @@
+{
+  "$schema": "../schemas/main.schema.json",
+  "pipeline": {
+    "name": "pipeline-architecture-diagram",
+    "version": "0.1.0",
+    "description": "A pipeline config that matches the project's architecture diagram",
+    "steps": [
+      {
+        "name": "step-1",
+        "type": "in-http"
+      },
+      {
+        "name": "step-2",
+        "type": "processor",
+        "source": "file:///path/to/data-processor.wasm",
+        "instances": 4,
+        "depends_on": ["step-1"]
+      },
+      {
+        "name": "step-3",
+        "type": "out-log",
+        "depends_on": ["step-2"]
+      },
+      {
+        "name": "step-4",
+        "type": "out-log",
+        "depends_on": ["step-2"]
+      }
+    ],
+    "messaging": {
+      "provider": "nats",
+      "instances": 3
+    }
+  }
+}

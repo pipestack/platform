@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "./schemas/nodes/in-s3.schema.json",
+  "type": "object",
+  "required": ["bucket"],
+  "properties": {
+    "bucket": {
+      "type": "string",
+      "minLength": 1,
+      "description": "S3 bucket name"
+    },
+    "prefix": {
+      "type": "string",
+      "description": "Object key prefix filter"
+    },
+    "poll_interval": {
+      "type": "string",
+      "pattern": "^\\d+[smh]$",
+      "default": "60s",
+      "description": "Polling interval (e.g., 30s, 5m, 1h)"
+    },
+    "file_pattern": {
+      "type": "string",
+      "description": "Regex pattern for file matching"
+    },
+    "region": {
+      "type": "string",
+      "description": "AWS region"
+    },
+    "credentials": {
+      "type": "object",
+      "properties": {
+        "access_key_id": { "type": "string" },
+        "secret_access_key": { "type": "string" },
+        "session_token": { "type": "string" },
+        "profile": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+package pipestack:out@0.1.0;
+
+interface out {
+    run: func(input: string) -> string;
+}
+
+world component {
+    export out;
+}

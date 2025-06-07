@@ -1,0 +1,170 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: example-pipeline
+  annotations:
+    description: A test pipeline with a hard-coded wadm file and no custom code
+    version: v0.0.1
+spec:
+  components:
+    # =======
+    # node-in
+    # =======
+    - name: node-in
+      type: component
+      properties:
+        image: file://./node-in.wasm
+        # image: localhost:5000/pipestack/in-http:0.0.1
+        config:
+          - name: node-in-config
+            properties:
+              next-step-topic: test-pipeline-03-step-2-in
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 10
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]  
+
+    # ========================================
+    # process component, with custom code
+    # ========================================
+    - name: node-process
+      type: component
+      properties:
+        image: file://./node-process.wasm
+        config:
+          - name: node-process-config
+            properties:
+              # with-custom-code: "true"
+              next-step-topic: test-pipeline-03-step-3-in
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 10
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]  
+    
+    # ========
+    # node-out
+    # ========
+    - name: node-out
+      type: component
+      properties:
+        image: file://./node-out.wasm
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 10
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]
+
+    - name: node-out-2
+      type: component
+      properties:
+        image: file://./node-out.wasm
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 10
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]  
+
+
+    # =======
+    # capabilities
+    # =======
+    - name: httpserver
+      type: capability
+      properties:
+        image: ghcr.io/wasmcloud/http-server:0.27.0
+        config:
+          - name: default-http-config
+            properties:
+              routing_mode: path
+              address: 0.0.0.0:7000
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            name: node-in-link
+            target:
+              name: node-in
+            namespace: wasi
+            package: http
+            interfaces: [incoming-handler]
+            source:
+              config:
+                - name: path-test-pipeline-03-custom-component
+                  properties:
+                    path: /test-pipeline-03-custom-component
+
+    - name: messaging-nats
+      type: capability
+      properties:
+        image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 5
+        - type: link
+          properties:
+            name: a
+            target:
+              name: node-process
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [handler]
+            source:
+              config:
+                - name: subscription-1
+                  properties:
+                    subscriptions: test-pipeline-03-step-2-in
+        - type: link
+          properties:
+            name: b
+            target:
+              name: node-out
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [handler]
+            source:
+              config:
+                - name: subscription-2
+                  properties:
+                    subscriptions: test-pipeline-03-step-3-in
+        - type: link
+          properties:
+            name: c
+            target:
+              name: node-out-2
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [handler]
+            source:
+              config:
+                - name: subscription-3
+                  properties:
+                    subscriptions: test-pipeline-03-step-3-in

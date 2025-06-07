@@ -1,0 +1,141 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: example-pipeline
+  annotations:
+    description: A test pipeline with a hard-coded wadm file and no custom code
+    version: v0.0.1
+spec:
+  components:
+    - name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-in-http
+      type: component
+      properties:
+        image: file://../../../platform/main/crates/nodes/in-http/build/in_http_s.wasm
+        # image: localhost:5000/pipestack/in-http:0.0.1
+        config:
+          - name: custom-config
+            properties:
+              topic-next-step: step-2-in
+      traits:
+        # Govern the spread/scheduling of the component
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            target:
+              name: test-pipeline-messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]  
+
+    # - name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-in-http-2
+    #   type: component
+    #   properties:
+    #     image: file://../../../platform/main/crates/nodes/in-http/build/in_http_s.wasm
+    #     # image: localhost:5000/pipestack/in-http:0.0.1
+    #   traits:
+    #     # Govern the spread/scheduling of the component
+    #     - type: spreadscaler
+    #       properties:
+    #         instances: 1
+    #     - type: link
+    #       properties:
+    #         target:
+    #           name: test-pipeline-messaging-nats
+    #         namespace: wasmcloud
+    #         package: messaging
+    #         interfaces: [consumer]
+            
+    - name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-out-log
+      type: component
+      properties:
+        image: file://../../../platform/main/crates/nodes/out-log/build/out_log_s.wasm
+        # image: localhost:5000/pipestack/out-log:0.0.1
+      traits:
+        # Govern the spread/scheduling of the component
+        - type: spreadscaler
+          properties:
+            instances: 1
+
+    # Add a capability provider that enables HTTP access
+    - name: test-pipeline-httpserver
+      type: capability
+      properties:
+        image: ghcr.io/wasmcloud/http-server:0.27.0
+        config:
+          - name: default-http-config
+            properties:
+              routing_mode: path
+              address: 0.0.0.0:7000
+          - name: httpserver-otel
+            properties:
+              otel_exporter_otlp_endpoint: "http://localhost:4318"
+              # otel_exporter_otlp_traces_endpoint: "http://traces-backend/v1/traces"
+              # otel_exporter_otlp_metrics_endpoint: "http://metrics-backend/v1/metrics"
+              # otel_exporter_otlp_logs_endpoint: "http://logs-backend/v1/logs"
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        # Establish a unidirectional link from this http server provider (the "source")
+        # to the `http-component` component (the "target") so the component can handle incoming HTTP requests,
+        #
+        # The source (this provider) is configured such that the HTTP server listens on 0.0.0.0:8000
+        - type: link
+          properties:
+            name: a
+            target:
+              name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-in-http
+            namespace: wasi
+            package: http
+            interfaces: [incoming-handler]
+            source:
+              config:
+                - name: path-a
+                  properties:
+                    path: /a
+        # - type: link
+        #   properties:
+        #     name: b
+        #     target:
+        #       name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-in-http-2
+        #     namespace: wasi
+        #     package: http
+        #     interfaces: [incoming-handler]
+        #     source:
+        #       config:
+        #         - name: path-b
+        #           properties:
+        #             path: /b
+
+    # Add a capability provider that implements `wasmcloud:messaging` using NATS
+    - name: test-pipeline-messaging-nats
+      type: capability
+      properties:
+        image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+        ## To configure OTEL integration for this provider specifically, uncomment the lines below
+        config:
+          - name: messaging-nats-otel
+            properties:
+              otel_exporter_otlp_endpoint: "http://localhost:4318"
+        #       otel_exporter_otlp_traces_endpoint: "http://traces-backend/v1/traces"
+        #       otel_exporter_otlp_metrics_endpoint: "http://metrics-backend/v1/metrics"
+        #       otel_exporter_otlp_logs_endpoint: "http://logs-backend/v1/logs"
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 2
+        - type: link
+          properties:
+            name: a
+            target:
+              name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-out-log
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [handler]
+            source:
+              config:
+                - name: subscription
+                  properties:
+                    subscriptions: step-2-in

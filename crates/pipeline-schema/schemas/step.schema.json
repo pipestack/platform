@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "./schemas/step.schema.json",
+  "type": "object",
+  "required": ["name", "type"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Unique step identifier"
+    },
+    "type": {
+      "enum": [
+        "in-http", "in-kafka", "in-s3", "in-postgres", "in-redis", "in-file", "in-grpc",
+        "processor",
+        "out-kafka", "out-s3", "out-postgres", "out-redis", "out-http", "out-file", "out-elasticsearch", "out-log"
+      ],
+      "description": "Step type"
+    },
+    "source": {
+      "type": "string",
+      "description": "WASM file path or container image (required for processor type)"
+    },
+    "instances": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 1,
+      "description": "Number of instances to run"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of step names this step depends on"
+    },
+    "config": {
+      "type": "object",
+      "description": "Type-specific configuration"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "const": "processor" } }
+      },
+      "then": {
+        "required": ["source"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "in-http" } }
+      },
+      "then": {
+        "properties": {
+          "config": { "$ref": "./nodes/in-http.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "in-kafka" } }
+      },
+      "then": {
+        "properties": {
+          "config": { "$ref": "./nodes/in-kafka.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "in-s3" } }
+      },
+      "then": {
+        "properties": {
+          "config": { "$ref": "./nodes/in-aws-s3.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "in-postgres" } }
+      },
+      "then": {
+        "properties": {
+          "config": { "$ref": "./nodes/in-postgres.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "out-kafka" } }
+      },
+      "then": {
+        "properties": {
+          "config": { "$ref": "./nodes/out-kafka.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "out-s3" } }
+      },
+      "then": {
+        "properties": {
+          "config": { "$ref": "./nodes/out-aws-s3.schema.json" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "out-postgres" } }
+      },
+      "then": {
+        "properties": {
+          "config": { "$ref": "./nodes/out-postgres.schema.json" }
+        }
+      }
+    }
+  ]
+}

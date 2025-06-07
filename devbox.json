@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.2/.schema/devbox.schema.json",
+  "packages": [
+    "rustup@latest",
+    "libiconv@latest",
+    "just@latest"
+  ],
+  "env": {
+    "WASMCLOUD_OBSERVABILITY_ENABLED": "true",
+    "OTEL_TRACES_EXPORTER":            "otlp",
+    "WASMCLOUD_VERSION":               "1.8.0",
+    "OTEL_EXPORTER_OTLP_ENDPOINT":     "http://127.0.0.1:4318",
+    "WASMCLOUD_OCI_ALLOWED_INSECURE":  "localhost:5000"
+  },
+  "shell": {
+    "init_hook": [
+      "cargo install wash",
+      "set -gx PATH $HOME/.cargo/bin $PATH",
+      "cargo fetch"
+    ]
+  }
+}

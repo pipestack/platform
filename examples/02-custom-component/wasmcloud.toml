@@ -1,0 +1,11 @@
+name = "customer"
+language = "rust"
+type = "component"
+
+[component]
+wasm_target = "wasm32-wasip2"
+
+[registry.pull]
+sources = [
+    { target = "wrpc:rpc", source = "https://github.com/wrpc/rpc/archive/v0.1.0.tar.gz" },
+]

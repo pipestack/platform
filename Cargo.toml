@@ -1,0 +1,9 @@
+[workspace]
+members = ["crates/nodes/*", "examples/*"]
+resolver = "3"
+
+[workspace.dependencies]
+wasmbus-rpc = "0.15.0"
+wasmcloud-component = "0.2.0"
+wasmcloud-interface-messaging = "0.11.0"
+wit-bindgen = "0.42.1"

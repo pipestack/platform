@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "./schemas/nodes/in-postgres.schema.json",
+  "type": "object",
+  "required": ["connection_string"],
+  "properties": {
+    "connection_string": {
+      "type": "string",
+      "pattern": "^postgres(ql)?://",
+      "description": "PostgreSQL connection string"
+    },
+    "query": {
+      "type": "string",
+      "description": "SQL query for polling"
+    },
+    "poll_interval": {
+      "type": "string",
+      "pattern": "^\\d+[smh]$",
+      "default": "60s",
+      "description": "Polling interval"
+    },
+    "id_column": {
+      "type": "string",
+      "description": "Column to track for incremental polling"
+    }
+  }
+}
