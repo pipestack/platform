@@ -1,0 +1,11 @@
+deploy: build
+    wash app delete example-pipeline
+    wash app deploy local.wadm.yaml
+
+build:
+    #!/usr/bin/env bash
+    echo "[START] Composing pipeline components..."
+    wac plug ../../crates/nodes/in-http/build/in_http_s.wasm --plug ../../crates/nodes/out-internal/build/out_internal_s.wasm -o ./build/node-in.wasm
+    wac plug ../../crates/nodes/in-internal/build/in_internal_s.wasm --plug ./build/custom_component_s.wasm --plug ../../crates/nodes/out-internal/build/out_internal_s.wasm -o ./build/node-process.wasm
+    wac plug ../../crates/nodes/in-internal/build/in_internal_s.wasm --plug ../../crates/nodes/out-log/build/out_log_s.wasm -o ./build/node-out.wasm
+    echo "[DONE] Composing pipeline components"

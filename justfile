@@ -11,7 +11,7 @@ wash-build-all:
     done
     
 # Deploys an example from `examples/*`. Pass the example ID, e.g. 01 or 02, as a parameter
-wash-deploy-example example:
+wash-deploy-example example task="deploy":
     #!/usr/bin/env bash
     example_dir="examples/{{example}}*"
     found_dir=""
@@ -24,15 +24,13 @@ wash-deploy-example example:
     done
 
     if [ -z "$found_dir" ]; then
-        echo "❌ No example directory found matching: $example"
+        echo "❌ No example directory found matching: {{example}}"
         exit 1
     fi
 
-    echo "🚀 Deploying example in $found_dir ..."
-    cd "$found_dir"
-    wash app delete example-pipeline
-    wash app deploy local.wadm.yaml
-    cd - > /dev/null
+    echo "🚀 Running task '{{task}}' in $found_dir ..."
+    just --justfile "$found_dir/justfile" --working-directory "$found_dir" {{task}}
+
 
 wash-up:
     wash up --allowed-insecure localhost:5000 -d
