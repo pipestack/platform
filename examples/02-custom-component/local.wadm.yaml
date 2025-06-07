@@ -90,10 +90,9 @@ spec:
             package: messaging
             interfaces: [consumer]  
 
-
-    # =======
+    # ============
     # capabilities
-    # =======
+    # ============
     - name: httpserver
       type: capability
       properties:
@@ -117,9 +116,9 @@ spec:
             interfaces: [incoming-handler]
             source:
               config:
-                - name: path-test-pipeline-03-custom-component
+                - name: path
                   properties:
-                    path: /test-pipeline-03-custom-component
+                    path: /example-pipeline
 
     - name: messaging-nats
       type: capability
