@@ -1,11 +1,19 @@
-deploy: build
+pipeline-deploy: components-push
     wash app delete example-pipeline
     wash app deploy local.wadm.yaml
 
-build:
+components-build:
     #!/usr/bin/env bash
     echo "[START] Composing pipeline components..."
     wac plug ../../crates/nodes/in-http/build/in_http_s.wasm --plug ../../crates/nodes/out-internal/build/out_internal_s.wasm -o ./build/node-in.wasm
     wac plug ../../crates/nodes/in-internal/build/in_internal_s.wasm --plug ./build/custom_component_s.wasm --plug ../../crates/nodes/out-internal/build/out_internal_s.wasm -o ./build/node-process.wasm
     wac plug ../../crates/nodes/in-internal/build/in_internal_s.wasm --plug ../../crates/nodes/out-log/build/out_log_s.wasm -o ./build/node-out.wasm
     echo "[DONE] Composing pipeline components"
+
+components-push: components-build
+    #!/usr/bin/env bash
+    echo "[START] Pushing pipeline components to registry..."
+    wash push --insecure localhost:5000/pipestack/node-in:0.0.1 ./build/node-in.wasm
+    wash push --insecure localhost:5000/pipestack/node-process:0.0.1 ./build/node-process.wasm
+    wash push --insecure localhost:5000/pipestack/node-out:0.0.1 ./build/node-out.wasm
+    echo "[DONE] Pushing pipeline components to registry"
