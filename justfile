@@ -11,7 +11,7 @@ wash-build-all:
     done
     
 # Deploys an example from `examples/*`. Pass the example ID, e.g. 01 or 02, as a parameter
-wash-deploy-example example task="deploy":
+wash-deploy-example example task="deploy": wash-build-all
     #!/usr/bin/env bash
     example_dir="examples/{{example}}*"
     found_dir=""
@@ -38,5 +38,5 @@ wash-up:
 wash-down:
     wash down --purge-jetstream all
 
-wash-logs-tail:
+wash-logs:
     tail -f ~/.wash/downloads/wasmcloud.log
