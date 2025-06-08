@@ -1,0 +1,20 @@
+version: "0.5"
+is_strict: true
+log_location: /tmp/pc.global.log
+processes:
+  dev_wash_logs:
+    namespace: dev
+    command: |
+      just wash-logs
+    is_tty: true
+  dev_wash_ui:
+    namespace: dev
+    command: |
+      wash ui
+    is_tty: true
+    readiness_probe:
+      http_get:
+        host: localhost
+        scheme: http
+        path: "/"
+        port: 3030
