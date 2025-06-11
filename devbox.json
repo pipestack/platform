@@ -4,7 +4,8 @@
     "rustup@latest",
     "libiconv@latest",
     "just@latest",
-    "process-compose@latest"
+    "process-compose@latest",
+    "nodejs@22"
   ],
   "env": {
     "WASMCLOUD_OBSERVABILITY_ENABLED": "true",
@@ -17,6 +18,7 @@
   "shell": {
     "init_hook": [
       "cargo install wash",
+      "cargo install cargo-watch",
       "cargo fetch"
     ],
     "scripts": {

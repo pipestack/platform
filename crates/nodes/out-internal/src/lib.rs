@@ -28,7 +28,7 @@ impl Guest for Component {
         if let Err(err) = consumer::publish(&types::BrokerMessage {
             subject: subject.clone(),
             reply_to: None,
-            body: String::from("A body sent from in-http").into_bytes(),
+            body: input.into_bytes(),
         }) {
             log(
                 Level::Error,
@@ -42,7 +42,8 @@ impl Guest for Component {
             format!("Successfully posted a message with subject: {subject:?}").as_str(),
         );
 
-        format!("Received: {input}. Hello there")
+        format!("Done")
+        // format!("Received: {input}. Hello there")
         // TODO: Send the input to the next step in the pipeline based on configuration
     }
 }

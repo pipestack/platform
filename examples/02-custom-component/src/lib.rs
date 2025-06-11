@@ -6,9 +6,7 @@ struct Component;
 
 impl Guest for Component {
     fn run(input: String) -> Result<String, rpc::error::Error> {
-        Ok(format!(
-            "Input: {input}. Howdy from the custom component code!"
-        ))
+        Ok(input.to_uppercase())
     }
 }
 

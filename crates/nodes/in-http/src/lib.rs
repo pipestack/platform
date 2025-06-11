@@ -12,11 +12,25 @@ http::export!(Component);
 
 impl http::Server for Component {
     fn handle(
-        _request: http::IncomingRequest,
+        request: http::IncomingRequest,
     ) -> http::Result<http::Response<impl http::OutgoingBody>> {
         // let out_internal = wasmcloud::bus::lattice::CallTargetInterface::new("pipestack", "out-internal", "out-internal");
 
-        let received = pipestack::out::out::run("Message from in-http");
+        let message = request
+            .uri()
+            .query()
+            .and_then(|query| {
+                query.split('&').find_map(|param| {
+                    let mut parts = param.split('=');
+                    match (parts.next(), parts.next()) {
+                        (Some("message"), Some(value)) => Some(value),
+                        _ => None,
+                    }
+                })
+            })
+            .unwrap_or("default message");
+
+        let received = pipestack::out::out::run(&message);
 
         // let subject = wasi::config::runtime::get("topic-next-step")
         //     .expect("Unable to fetch value")
@@ -39,8 +53,6 @@ impl http::Server for Component {
         //     format!("Successfully posted a message with subject: {subject:?}").as_str(),
         // );
 
-        Ok(http::Response::new(format!(
-            "Hello from Wasm Rust! Message received: {received}\n"
-        )))
+        Ok(http::Response::new(format!("{received}\n")))
     }
 }
