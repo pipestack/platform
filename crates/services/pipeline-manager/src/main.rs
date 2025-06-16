@@ -1,7 +1,9 @@
 use axum::{Json, Router, http::StatusCode, routing::post};
 use serde::{Deserialize, Serialize};
-use tokio::process::Command;
 use tower_http::cors::{Any, CorsLayer};
+
+mod config_converter;
+use config_converter::Pipeline;
 
 #[tokio::main]
 async fn main() {
@@ -18,7 +20,7 @@ async fn main() {
 
     let app = Router::new().route("/deploy", post(deploy)).layer(cors);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
@@ -26,86 +28,67 @@ async fn main() {
 async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployResponse>) {
     tracing::info!("Received deploy request: {:?}", payload);
 
-    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    let work_dir = format!("{}/projects/github/pipestack/platform/main", home_dir);
-
-    tracing::info!("Building and deploying pipeline: {work_dir}");
-
-    match Command::new("just")
-        .args(&["wash-deploy-example", "02"])
-        .current_dir(&work_dir)
-        .output()
-        .await
-    {
-        Ok(output) => {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-
-            if output.status.success() {
-                tracing::info!("Command executed successfully: {}", stdout);
-                (
-                    StatusCode::OK,
-                    Json(DeployResponse {
-                        result: format!("Deploy completed successfully: {}", stdout),
-                    }),
-                )
-            } else {
-                tracing::error!("Command failed with stderr: {}", stderr);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(DeployResponse {
-                        result: format!("Deploy failed: {}", stderr),
-                    }),
-                )
-            }
+    // Convert payload to a valid wadm file
+    let wadm_config = match config_converter::convert_pipeline(&payload.pipeline) {
+        Ok(config) => {
+            tracing::info!("Successfully converted pipeline to WADM config");
+            config
         }
         Err(e) => {
-            tracing::error!("Failed to execute command: {}", e);
-            (
+            tracing::error!("Failed to convert pipeline: {}", e);
+            return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeployResponse {
-                    result: format!("Failed to execute deploy command: {}", e),
+                    result: format!("Error converting pipeline: {}", e),
                 }),
-            )
+            );
         }
-    }
-
-    // match call_component_composer_service(&payload).await {
-    //     Ok(response) => (StatusCode::OK, Json(response)),
-    //     Err(e) => {
-    //         tracing::error!("Deploy failed: {}", e);
-    //         (
-    //             StatusCode::INTERNAL_SERVER_ERROR,
-    //             Json(DeployResponse {
-    //                 result: format!("Deploy failed: {}", e),
-    //             }),
-    //         )
-    //     }
-    // }
+    };
+    
+    // Convert to YAML string
+    let wadm_yaml = match serde_yaml::to_string(&wadm_config) {
+        Ok(yaml) => yaml,
+        Err(e) => {
+            tracing::error!("Failed to serialize WADM config to YAML: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DeployResponse {
+                    result: format!("Error serializing WADM config: {}", e),
+                }),
+            );
+        }
+    };
+    
+    tracing::info!("WADM yaml generated successfully: {wadm_yaml}");
+    
+    // TODO: Deploy wadm file
+    let client = wadm_client::Client::new("default", None, wadm_client::ClientConnectOptions {
+        ca_path: None,
+        creds_path: None,
+        jwt: None,
+        seed: None,
+        url: None
+    }).await.unwrap();
+    
+    // TODO: Only undeploy and delete the manifest in DEV, not PROD
+    tracing::info!("Undeploying manifest: {}", &wadm_config.metadata.name);
+    let _ = client.undeploy_manifest(&wadm_config.metadata.name).await;
+    tracing::info!("Deleting manifest: {}", &wadm_config.metadata.name);
+    client.delete_manifest(&wadm_config.metadata.name, None).await.unwrap();
+    tracing::info!("Putting and deploying manifest: {}", &wadm_config.metadata.name);
+    client.put_and_deploy_manifest(wadm_yaml.as_bytes()).await.unwrap();
+    
+    (
+        StatusCode::OK,
+        Json(DeployResponse {
+            result: format!("Pipeline converted successfully"),
+        }),
+    )
 }
-
-// async fn call_component_composer_service(
-//     payload: &DeployRequest,
-// ) -> Result<DeployResponse, String> {
-//     let client = reqwest::Client::new();
-//     let response = client
-//         .post("http://localhost:3000/compose")
-//         .json(payload)
-//         .send()
-//         .await
-//         .map_err(|e| format!("Request failed: {}", e))?;
-
-//     tracing::info!("POST request successful: {}", response.status());
-
-//     response
-//         .json::<DeployResponse>()
-//         .await
-//         .map_err(|e| format!("Failed to parse response: {}", e))
-// }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct DeployRequest {
-    pipeline: serde_json::Value,
+    pipeline: Pipeline,
 }
 
 #[derive(Deserialize, Serialize)]

@@ -2,13 +2,6 @@ version: "0.5"
 is_strict: true
 log_location: /tmp/pc.global.log
 processes:
-  dev_services_component_composer:
-      namespace: dev
-      command: |
-        cargo watch -x "run --bin component-composer"
-      environment:
-        - "RUST_LOG=debug"
-      is_tty: true
   dev_services_pipeline_manager:
       namespace: dev
       command: |

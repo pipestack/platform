@@ -1,0 +1,241 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: example-pipeline
+  annotations:
+    description: A test pipeline with a hard-coded wadm file and custom code
+    version: v0.0.1
+spec:
+  components:
+    # Step 1
+    - name: in-http
+      type: component
+      properties:
+        image: localhost:5000/pipestack/in-http:0.0.1
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            target: out-internal-for-in-http
+            namespace: pipestack
+            package: out
+            interfaces: [out]
+
+    - name: out-internal-for-in-http
+      type: component
+      properties:
+        image: localhost:5000/pipestack/out-internal:0.0.1
+        config:
+          - name: out-internal-for-in-http-config
+            properties:
+              next-step-topic: test-pipeline-03-step-2-in
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]
+
+    # Step 2
+    - name: in-internal-for-custom-component-links-only
+      type: component
+      properties:
+        image: localhost:5000/pipestack/in-internal:0.0.1
+        config:
+          - name: custom-component-links-only-config
+            properties:
+              next-step-topic: test-pipeline-03-step-3-in
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            target: custom-component-links-only
+            namespace: pipestack
+            package: customer
+            interfaces: [customer]
+        - type: link
+          properties:
+            target: out-internal-for-custom-component-links-only
+            namespace: pipestack
+            package: out
+            interfaces: [out]
+
+    - name: custom-component-links-only
+      type: component
+      properties:
+        image: localhost:5000/pipestack/custom-component-links-only:0.0.1
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+
+    - name: out-internal-for-custom-component-links-only
+      type: component
+      properties:
+        image: localhost:5000/pipestack/out-internal:0.0.1
+        config:
+          - name: out-internal-for-custom-component-links-only-config
+            properties:
+              next-step-topic: test-pipeline-03-step-3-in
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]
+
+    # Step 3a
+    - name: in-internal-for-out-log-a
+      type: component
+      properties:
+        image: localhost:5000/pipestack/in-internal:0.0.1
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]
+        - type: link
+          properties:
+            target: out-log-a
+            namespace: pipestack
+            package: out
+            interfaces: [out]
+
+    - name: out-log-a
+      type: component
+      properties:
+        image: localhost:5000/pipestack/out-log:0.0.1
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+
+    # Step 3b
+    - name: in-internal-for-out-log-b
+      type: component
+      properties:
+        image: localhost:5000/pipestack/in-internal:0.0.1
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            target:
+              name: messaging-nats
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [consumer]
+        - type: link
+          properties:
+            target: out-log-b
+            namespace: pipestack
+            package: out
+            interfaces: [out]
+
+    - name: out-log-b
+      type: component
+      properties:
+        image: localhost:5000/pipestack/out-log:0.0.1
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+
+    # ============
+    # capabilities
+    # ============
+    - name: httpserver
+      type: capability
+      properties:
+        image: ghcr.io/wasmcloud/http-server:0.27.0
+        config:
+          - name: default-http-config
+            properties:
+              routing_mode: path
+              address: 0.0.0.0:7000
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 1
+        - type: link
+          properties:
+            name: in-http-link
+            target:
+              name: in-http
+            namespace: wasi
+            package: http
+            interfaces: [incoming-handler]
+            source:
+              config:
+                - name: path
+                  properties:
+                    path: /example-pipeline
+
+    - name: messaging-nats
+      type: capability
+      properties:
+        image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      traits:
+        - type: spreadscaler
+          properties:
+            instances: 5
+        - type: link
+          properties:
+            name: a
+            target:
+              name: in-internal-for-custom-component-links-only
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [handler]
+            source:
+              config:
+                - name: subscription-1
+                  properties:
+                    subscriptions: test-pipeline-03-step-2-in
+        - type: link
+          properties:
+            name: b
+            target:
+              name: in-internal-for-out-log-a
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [handler]
+            source:
+              config:
+                - name: subscription-2
+                  properties:
+                    subscriptions: test-pipeline-03-step-3-in
+        - type: link
+          properties:
+            name: c
+            target:
+              name: in-internal-for-out-log-b
+            namespace: wasmcloud
+            package: messaging
+            interfaces: [handler]
+            source:
+              config:
+                - name: subscription-3
+                  properties:
+                    subscriptions: test-pipeline-03-step-3-in
