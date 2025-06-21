@@ -22,7 +22,8 @@
       "cargo fetch"
     ],
     "scripts": {
-      "services": "process-compose"
+      "services": "process-compose",
+      "webapp:types:build": "cd ./crates/services/pipeline-manager/ && cargo test export_bindings && cp bindings/pipeline.ts ../../../../../webapp/main/src/routes/builder/types-rust.ts && cd -"
     }
   }
 }

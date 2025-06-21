@@ -12,7 +12,9 @@ tokio = { version = "1.45.1", features = ["full"] }
 tower-http = { version = "0.6.6", features = ["cors"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
+ts-rs = "11.0.1"
 wasmbus-rpc = "0.15.0"
 wasmcloud-component = "0.2.0"
 wasmcloud-interface-messaging = "0.11.0"
 wit-bindgen = "0.42.1"
+wadm-client = "0.10.0"
