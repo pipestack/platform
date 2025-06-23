@@ -1,21 +1,20 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use ts_rs::TS;
 
 const PIPELINE_TS_FILE_PATH: &str = "./pipeline.ts";
 
-#[derive(Debug, Deserialize, Serialize, TS)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
 pub struct Pipeline {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     pub steps: Vec<PipelineNode>,
 }
 
-#[derive(Debug, Deserialize, Serialize, TS)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
 pub struct PipelineNode {
     pub name: String,
@@ -29,7 +28,7 @@ pub struct PipelineNode {
     pub depends_on: Option<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, TS)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[serde(rename_all = "kebab-case")]
 #[ts(export, rename = "NodeType", export_to = PIPELINE_TS_FILE_PATH)]
 pub enum PipelineNodeType {
@@ -690,7 +689,7 @@ pub fn convert_pipeline(
                     pipeline
                         .version
                         .clone()
-                        .unwrap_or_else(|| "0.0.1".to_string()),
+                        .unwrap_or_else(|| "1.0.0".to_string()),
                 );
                 annotations
             },

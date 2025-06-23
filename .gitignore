@@ -6,5 +6,4 @@ target/
 **/wit/deps/
 
 # Node.js / Typescript
-node_modules
-crates/services/pipeline-manager/bindings
+crates/services/pipeline_manager/bindings

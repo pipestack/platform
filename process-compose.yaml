@@ -5,7 +5,7 @@ processes:
   dev_services_pipeline_manager:
       namespace: dev
       command: |
-        cargo watch -w crates/services/pipeline-manager -x "run --bin pipeline-manager"
+        cargo watch -w crates/services/pipeline_manager -x "run --bin pipeline_manager"
       environment:
         - "RUST_LOG=debug"
       is_tty: true

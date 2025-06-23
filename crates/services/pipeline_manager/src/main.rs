@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
 mod config_converter;
-use config_converter::Pipeline;
+
+use crate::config_converter::Pipeline;
 
 #[tokio::main]
 async fn main() {
@@ -44,7 +45,7 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
             );
         }
     };
-    
+
     // Convert to YAML string
     let wadm_yaml = match serde_yaml::to_string(&wadm_config) {
         Ok(yaml) => yaml,
@@ -58,30 +59,45 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
             );
         }
     };
-    
+
     tracing::info!("WADM yaml generated successfully: {wadm_yaml}");
-    
+
     // TODO: Deploy wadm file
-    let client = wadm_client::Client::new("default", None, wadm_client::ClientConnectOptions {
-        ca_path: None,
-        creds_path: None,
-        jwt: None,
-        seed: None,
-        url: None
-    }).await.unwrap();
-    
+    let client = wadm_client::Client::new(
+        "default",
+        None,
+        wadm_client::ClientConnectOptions {
+            ca_path: None,
+            creds_path: None,
+            jwt: None,
+            seed: None,
+            url: None,
+        },
+    )
+    .await
+    .unwrap();
+
     // TODO: Only undeploy and delete the manifest in DEV, not PROD
     tracing::info!("Undeploying manifest: {}", &wadm_config.metadata.name);
     let _ = client.undeploy_manifest(&wadm_config.metadata.name).await;
     tracing::info!("Deleting manifest: {}", &wadm_config.metadata.name);
-    client.delete_manifest(&wadm_config.metadata.name, None).await.unwrap();
-    tracing::info!("Putting and deploying manifest: {}", &wadm_config.metadata.name);
-    client.put_and_deploy_manifest(wadm_yaml.as_bytes()).await.unwrap();
-    
+    client
+        .delete_manifest(&wadm_config.metadata.name, None)
+        .await
+        .unwrap();
+    tracing::info!(
+        "Putting and deploying manifest: {}",
+        &wadm_config.metadata.name
+    );
+    client
+        .put_and_deploy_manifest(wadm_yaml.as_bytes())
+        .await
+        .unwrap();
+
     (
         StatusCode::OK,
         Json(DeployResponse {
-            result: format!("Pipeline converted successfully"),
+            result: format!("Pipeline deployed successfully"),
         }),
     )
 }

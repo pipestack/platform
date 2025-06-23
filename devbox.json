@@ -4,16 +4,15 @@
     "rustup@latest",
     "libiconv@latest",
     "just@latest",
-    "process-compose@latest",
-    "nodejs@22"
+    "process-compose@latest"
   ],
   "env": {
     "WASMCLOUD_OBSERVABILITY_ENABLED": "true",
-    "OTEL_TRACES_EXPORTER":            "otlp",
-    "WASMCLOUD_VERSION":               "1.8.0",
-    "OTEL_EXPORTER_OTLP_ENDPOINT":     "http://127.0.0.1:4318",
-    "WASMCLOUD_OCI_ALLOWED_INSECURE":  "localhost:5000",
-    "PATH":                            "$HOME/.cargo/bin:$PATH"
+    "OTEL_TRACES_EXPORTER": "otlp",
+    "WASMCLOUD_VERSION": "1.8.0",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:4318",
+    "WASMCLOUD_OCI_ALLOWED_INSECURE": "localhost:5000",
+    "PATH": "$HOME/.cargo/bin:$PATH"
   },
   "shell": {
     "init_hook": [
@@ -23,7 +22,8 @@
     ],
     "scripts": {
       "services": "process-compose",
-      "webapp:types:build": "cd ./crates/services/pipeline-manager/ && cargo test export_bindings && cp bindings/pipeline.ts ../../../../../webapp/main/src/routes/builder/types-rust.ts && cd -"
+      "webapp:schema:build": "cd ./crates/schemas/pipeline && cargo run > ../../../../../webapp/main/static/pipeline.schema.json && cd -",
+      "webapp:types:build": "cd ./crates/services/pipeline_manager/ && cargo test export_bindings && cp bindings/pipeline.ts ../../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion]/builder/types-rust.ts && cd -"
     }
   }
 }
