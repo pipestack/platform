@@ -1,9 +1,12 @@
+use std::net::SocketAddr;
+
 use axum::{
     Json, Router,
     http::StatusCode,
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
+use tokio::net::TcpListener;
 
 mod config_converter;
 
@@ -17,9 +20,15 @@ async fn main() {
         .route("/deploy", post(deploy))
         .route("/health", get(health));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, app).await.unwrap();
+    let port: u16 = std::env::var("PORT")
+        .unwrap_or("3000".into())
+        .parse()
+        .expect("failed to convert PORT env var to number");
+    let ipv6 = SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0], port));
+    let ipv6_listener = TcpListener::bind(&ipv6).await.unwrap();
+
+    tracing::info!("listening on {}", ipv6_listener.local_addr().unwrap());
+    axum::serve(ipv6_listener, app).await.unwrap();
 }
 
 async fn health() -> (StatusCode, Json<serde_json::Value>) {
