@@ -1,4 +1,8 @@
-use axum::{Json, Router, http::StatusCode, routing::post};
+use axum::{
+    Json, Router,
+    http::StatusCode,
+    routing::{get, post},
+};
 use serde::{Deserialize, Serialize};
 
 mod config_converter;
@@ -9,11 +13,22 @@ use crate::config_converter::Pipeline;
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let app = Router::new().route("/deploy", post(deploy));
+    let app = Router::new()
+        .route("/deploy", post(deploy))
+        .route("/health", get(health));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn health() -> (StatusCode, Json<serde_json::Value>) {
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "status": "healthy"
+        })),
+    )
 }
 
 async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployResponse>) {
