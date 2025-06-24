@@ -23,7 +23,7 @@
     "scripts": {
       "services": "process-compose",
       "webapp:schema:build": "cd ./crates/schemas/pipeline && cargo run > ../../../../../webapp/main/static/pipeline.schema.json && cd -",
-      "webapp:types:build": "cd ./crates/services/pipeline_manager/ && cargo test export_bindings && cp bindings/pipeline.ts ../../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion]/builder/types-rust.ts && cd -"
+      "webapp:types:build": "cd ./crates/services/pipeline_manager/ && cargo test export_bindings && cp bindings/pipeline.ts ../../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion=pipeline_version]/builder/types-rust.ts && cd -"
     }
   }
 }

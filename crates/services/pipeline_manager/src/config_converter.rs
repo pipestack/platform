@@ -11,7 +11,14 @@ pub struct Pipeline {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    pub steps: Vec<PipelineNode>,
+    pub nodes: Vec<PipelineNode>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
+pub struct XYPosition {
+    pub x: u32,
+    pub y: u32,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
@@ -24,6 +31,7 @@ pub struct PipelineNode {
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instances: Option<u32>,
+    pub position: XYPosition,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<Vec<String>>,
 }
@@ -194,7 +202,7 @@ pub fn convert_pipeline(
     let mut dependency_groups: HashMap<String, String> = HashMap::new();
     let mut topic_counter = 2; // Start from step 2 since step 1 is the input
 
-    for step in &pipeline.steps {
+    for step in &pipeline.nodes {
         if let Some(depends_on) = &step.depends_on {
             if !depends_on.is_empty() {
                 let dependency_key = depends_on.join(",");
@@ -214,7 +222,7 @@ pub fn convert_pipeline(
     }
 
     // Process each step
-    for step in &pipeline.steps {
+    for step in &pipeline.nodes {
         match step.step_type {
             PipelineNodeType::InHttpWebhook => {
                 // Add in-http component
@@ -260,7 +268,7 @@ pub fn convert_pipeline(
                 } else {
                     // Find steps that depend on this one
                     pipeline
-                        .steps
+                        .nodes
                         .iter()
                         .find(|s| {
                             s.depends_on
@@ -315,7 +323,7 @@ pub fn convert_pipeline(
             PipelineNodeType::ProcessorWasm => {
                 // Add in-internal component
                 let next_topics: Vec<String> = pipeline
-                    .steps
+                    .nodes
                     .iter()
                     .filter(|s| {
                         s.depends_on
@@ -406,7 +414,7 @@ pub fn convert_pipeline(
 
                 // Add out-internal component for processor
                 let next_topics: Vec<String> = pipeline
-                    .steps
+                    .nodes
                     .iter()
                     .filter(|s| {
                         s.depends_on
@@ -525,12 +533,12 @@ pub fn convert_pipeline(
     // Add capabilities (httpserver and messaging-nats)
     // HTTP Server capability
     if pipeline
-        .steps
+        .nodes
         .iter()
         .any(|s| matches!(s.step_type, PipelineNodeType::InHttpWebhook))
     {
         let http_step = pipeline
-            .steps
+            .nodes
             .iter()
             .find(|s| matches!(s.step_type, PipelineNodeType::InHttpWebhook))
             .unwrap();
@@ -600,7 +608,7 @@ pub fn convert_pipeline(
     let mut link_counter = 'a' as u8;
 
     // First add the processor step link
-    for step in &pipeline.steps {
+    for step in &pipeline.nodes {
         if matches!(step.step_type, PipelineNodeType::ProcessorWasm) {
             if let Some(topic) = step_topics.get(&step.name) {
                 nats_traits.push(Trait {
@@ -634,7 +642,7 @@ pub fn convert_pipeline(
     }
 
     // Then add the out-log step links
-    for step in &pipeline.steps {
+    for step in &pipeline.nodes {
         if matches!(step.step_type, PipelineNodeType::OutLog) {
             if let Some(topic) = step_topics.get(&step.name) {
                 nats_traits.push(Trait {
