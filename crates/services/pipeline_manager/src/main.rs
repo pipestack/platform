@@ -1,6 +1,5 @@
 use axum::{Json, Router, http::StatusCode, routing::post};
 use serde::{Deserialize, Serialize};
-use tower_http::cors::{Any, CorsLayer};
 
 mod config_converter;
 
@@ -10,16 +9,7 @@ use crate::config_converter::Pipeline;
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let cors = CorsLayer::new()
-        .allow_origin(
-            "http://localhost:5173"
-                .parse::<axum::http::HeaderValue>()
-                .unwrap(),
-        )
-        .allow_methods([axum::http::Method::POST])
-        .allow_headers(Any);
-
-    let app = Router::new().route("/deploy", post(deploy)).layer(cors);
+    let app = Router::new().route("/deploy", post(deploy));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
