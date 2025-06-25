@@ -85,7 +85,10 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
             creds_path: None,
             jwt: None,
             seed: None,
-            url: None,
+            url: Some(String::from(match std::option_env!("REGISTRY_URL") {
+                Some(url) => url,
+                None => "localhost:5000",
+            })),
         },
     )
     .await

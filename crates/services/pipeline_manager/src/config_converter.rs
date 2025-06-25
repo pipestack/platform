@@ -4,6 +4,10 @@ use std::collections::{BTreeMap, HashMap};
 use ts_rs::TS;
 
 const PIPELINE_TS_FILE_PATH: &str = "./pipeline.ts";
+const REGISTRY_URL: &'static str = match std::option_env!("REGISTRY_URL") {
+    Some(url) => url,
+    None => "localhost:5000"
+};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
@@ -17,8 +21,8 @@ pub struct Pipeline {
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
 pub struct XYPosition {
-    pub x: u32,
-    pub y: u32,
+    pub x: f32,
+    pub y: f32,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
@@ -230,7 +234,7 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("localhost:5000/pipestack/in-http:0.0.1"),
+                        image: format!("{}/pipestack/in-http:0.0.1", REGISTRY_URL),
                         config: vec![],
                     },
                     traits: vec![
@@ -285,7 +289,7 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: "localhost:5000/pipestack/out-internal:0.0.1".to_string(),
+                            image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -354,7 +358,7 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: "localhost:5000/pipestack/in-internal:0.0.1".to_string(),
+                        image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
                         config,
                     },
                     traits: vec![
@@ -394,7 +398,7 @@ pub fn convert_pipeline(
                 let image = if let Some(source) = &step.source {
                     source.clone()
                 } else {
-                    format!("localhost:5000/pipestack/{}:0.0.1", step.name)
+                    format!("{}/pipestack/{}:0.0.1", REGISTRY_URL, step.name)
                 };
 
                 components.push(Component {
@@ -430,7 +434,7 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: "localhost:5000/pipestack/out-internal:0.0.1".to_string(),
+                            image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -471,7 +475,7 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: "localhost:5000/pipestack/in-internal:0.0.1".to_string(),
+                        image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
                         config: vec![],
                     },
                     traits: vec![
@@ -513,7 +517,7 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: "localhost:5000/pipestack/out-log:0.0.1".to_string(),
+                        image: format!("{}/pipestack/out-log:0.0.1", REGISTRY_URL),
                         config: vec![],
                     },
                     traits: vec![Trait {
