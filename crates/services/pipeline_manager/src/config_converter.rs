@@ -608,7 +608,7 @@ pub fn convert_pipeline(
     // NATS messaging capability
     let mut nats_traits = vec![Trait {
         trait_type: "spreadscaler".to_string(),
-        properties: TraitProperties::Spreadscaler { instances: 5 },
+        properties: TraitProperties::Spreadscaler { instances: 1 },
     }];
 
     // Add link traits for each step that needs messaging in the correct order
