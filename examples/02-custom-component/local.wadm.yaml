@@ -104,7 +104,7 @@ spec:
           - name: default-http-config
             properties:
               routing_mode: path
-              address: 0.0.0.0:7000
+              address: 0.0.0.0:8000
       traits:
         - type: spreadscaler
           properties:

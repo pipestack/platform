@@ -562,7 +562,7 @@ pub fn convert_pipeline(
                         );
                         props.insert(
                             "address".to_string(),
-                            serde_yaml::Value::String("0.0.0.0:7000".to_string()),
+                            serde_yaml::Value::String("0.0.0.0:8000".to_string()),
                         );
                         props
                     },
@@ -906,7 +906,7 @@ spec:
       config:
       - name: default-http-config
         properties:
-          address: 0.0.0.0:7000
+          address: 0.0.0.0:8000
           routing_mode: path
     traits:
     - type: spreadscaler
@@ -1149,7 +1149,7 @@ spec:
       config:
       - name: default-http-config
         properties:
-          address: 0.0.0.0:7000
+          address: 0.0.0.0:8000
           routing_mode: path
     traits:
     - type: spreadscaler

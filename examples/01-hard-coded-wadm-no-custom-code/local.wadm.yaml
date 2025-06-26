@@ -49,7 +49,7 @@ spec:
           - name: default-http-config
             properties:
               routing_mode: path
-              address: 0.0.0.0:7000
+              address: 0.0.0.0:8000
           - name: httpserver-otel
             properties:
               otel_exporter_otlp_endpoint: "http://localhost:4318"
