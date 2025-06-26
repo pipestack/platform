@@ -249,7 +249,7 @@ pub fn convert_pipeline(
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
                                 target: LinkTarget::String(format!(
-                                    "out-internal-for-{}",
+                                    "out_internal_for_{}",
                                     step.name
                                 )),
                                 namespace: "pipestack".to_string(),
@@ -286,12 +286,12 @@ pub fn convert_pipeline(
 
                 if !next_topic.is_empty() {
                     components.push(Component {
-                        name: format!("out-internal-for-{}", step.name),
+                        name: format!("out_internal_for_{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
                             image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
                             config: vec![Config {
-                                name: format!("out-internal-for-{}-config", step.name),
+                                name: format!("out_internal_for_{}-config", step.name),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -355,7 +355,7 @@ pub fn convert_pipeline(
                 };
 
                 components.push(Component {
-                    name: format!("in-internal-for-{}", step.name),
+                    name: format!("in_internal_for_{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
                         image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
@@ -382,7 +382,7 @@ pub fn convert_pipeline(
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
                                 target: LinkTarget::String(format!(
-                                    "out-internal-for-{}",
+                                    "out_internal_for_{}",
                                     step.name
                                 )),
                                 namespace: "pipestack".to_string(),
@@ -431,12 +431,12 @@ pub fn convert_pipeline(
 
                 if !next_topics.is_empty() {
                     components.push(Component {
-                        name: format!("out-internal-for-{}", step.name),
+                        name: format!("out_internal_for_{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
                             image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
                             config: vec![Config {
-                                name: format!("out-internal-for-{}-config", step.name),
+                                name: format!("out_internal_for_{}-config", step.name),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -472,7 +472,7 @@ pub fn convert_pipeline(
             PipelineNodeType::OutLog => {
                 // Add in-internal component for out-log
                 components.push(Component {
-                    name: format!("in-internal-for-{}", step.name),
+                    name: format!("in_internal_for_{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
                         image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
@@ -623,7 +623,7 @@ pub fn convert_pipeline(
                     properties: TraitProperties::Link(LinkProperties {
                         name: Some((link_counter as char).to_string()),
                         target: LinkTarget::Name {
-                            name: format!("in-internal-for-{}", step.name),
+                            name: format!("in_internal_for_{}", step.name),
                         },
                         namespace: "wasmcloud".to_string(),
                         package: "messaging".to_string(),
@@ -657,7 +657,7 @@ pub fn convert_pipeline(
                     properties: TraitProperties::Link(LinkProperties {
                         name: Some((link_counter as char).to_string()),
                         target: LinkTarget::Name {
-                            name: format!("in-internal-for-{}", step.name),
+                            name: format!("in_internal_for_{}", step.name),
                         },
                         namespace: "wasmcloud".to_string(),
                         package: "messaging".to_string(),
@@ -753,17 +753,17 @@ spec:
         instances: 1
     - type: link
       properties:
-        target: out-internal-for-in-http_http_1_1750048123367
+        target: out_internal_for_in-http_http_1_1750048123367
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out-internal-for-in-http_http_1_1750048123367
+  - name: out_internal_for_in-http_http_1_1750048123367
     type: component
     properties:
       image: localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-in-http_http_1_1750048123367-config
+      - name: out_internal_for_in-http_http_1_1750048123367-config
         properties:
           next-step-topic: untitled-pipeline-step-2-in
     traits:
@@ -778,7 +778,7 @@ spec:
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-processor_wasm_2_1750048126167
+  - name: in_internal_for_processor_wasm_2_1750048126167
     type: component
     properties:
       image: localhost:5000/pipestack/in-internal:0.0.1
@@ -799,7 +799,7 @@ spec:
         - customer
     - type: link
       properties:
-        target: out-internal-for-processor_wasm_2_1750048126167
+        target: out_internal_for_processor_wasm_2_1750048126167
         namespace: pipestack
         package: out
         interfaces:
@@ -812,12 +812,12 @@ spec:
     - type: spreadscaler
       properties:
         instances: 4
-  - name: out-internal-for-processor_wasm_2_1750048126167
+  - name: out_internal_for_processor_wasm_2_1750048126167
     type: component
     properties:
       image: localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-processor_wasm_2_1750048126167-config
+      - name: out_internal_for_processor_wasm_2_1750048126167-config
         properties:
           next-step-topic: untitled-pipeline-step-3-in
     traits:
@@ -832,7 +832,7 @@ spec:
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-out-log_log_3_1750048128320
+  - name: in_internal_for_out-log_log_3_1750048128320
     type: component
     properties:
       image: localhost:5000/pipestack/in-internal:0.0.1
@@ -863,7 +863,7 @@ spec:
     - type: spreadscaler
       properties:
         instances: 1
-  - name: in-internal-for-out-log_log_4_1750048130049
+  - name: in_internal_for_out-log_log_4_1750048130049
     type: component
     properties:
       image: localhost:5000/pipestack/in-internal:0.0.1
@@ -933,7 +933,7 @@ spec:
       properties:
         name: a
         target:
-          name: in-internal-for-processor_wasm_2_1750048126167
+          name: in_internal_for_processor_wasm_2_1750048126167
         namespace: wasmcloud
         package: messaging
         interfaces:
@@ -947,7 +947,7 @@ spec:
       properties:
         name: b
         target:
-          name: in-internal-for-out-log_log_3_1750048128320
+          name: in_internal_for_out-log_log_3_1750048128320
         namespace: wasmcloud
         package: messaging
         interfaces:
@@ -961,7 +961,7 @@ spec:
       properties:
         name: c
         target:
-          name: in-internal-for-out-log_log_4_1750048130049
+          name: in_internal_for_out-log_log_4_1750048130049
         namespace: wasmcloud
         package: messaging
         interfaces:
@@ -1027,17 +1027,17 @@ spec:
         instances: 1
     - type: link
       properties:
-        target: out-internal-for-in-http_http_1_1750048123367
+        target: out_internal_for_in-http_http_1_1750048123367
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out-internal-for-in-http_http_1_1750048123367
+  - name: out_internal_for_in-http_http_1_1750048123367
     type: component
     properties:
       image: localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-in-http_http_1_1750048123367-config
+      - name: out_internal_for_in-http_http_1_1750048123367-config
         properties:
           next-step-topic: untitled-pipeline-step-2-in
     traits:
@@ -1052,7 +1052,7 @@ spec:
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-processor_wasm_2_1750048126167
+  - name: in_internal_for_processor_wasm_2_1750048126167
     type: component
     properties:
       image: localhost:5000/pipestack/in-internal:0.0.1
@@ -1073,7 +1073,7 @@ spec:
         - customer
     - type: link
       properties:
-        target: out-internal-for-processor_wasm_2_1750048126167
+        target: out_internal_for_processor_wasm_2_1750048126167
         namespace: pipestack
         package: out
         interfaces:
@@ -1086,12 +1086,12 @@ spec:
     - type: spreadscaler
       properties:
         instances: 4
-  - name: out-internal-for-processor_wasm_2_1750048126167
+  - name: out_internal_for_processor_wasm_2_1750048126167
     type: component
     properties:
       image: localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-processor_wasm_2_1750048126167-config
+      - name: out_internal_for_processor_wasm_2_1750048126167-config
         properties:
           next-step-topic: untitled-pipeline-step-3-in
     traits:
@@ -1106,7 +1106,7 @@ spec:
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-out-log_log_3_1750048128320
+  - name: in_internal_for_out-log_log_3_1750048128320
     type: component
     properties:
       image: localhost:5000/pipestack/in-internal:0.0.1
@@ -1176,7 +1176,7 @@ spec:
       properties:
         name: a
         target:
-          name: in-internal-for-processor_wasm_2_1750048126167
+          name: in_internal_for_processor_wasm_2_1750048126167
         namespace: wasmcloud
         package: messaging
         interfaces:
@@ -1190,7 +1190,7 @@ spec:
       properties:
         name: b
         target:
-          name: in-internal-for-out-log_log_3_1750048128320
+          name: in_internal_for_out-log_log_3_1750048128320
         namespace: wasmcloud
         package: messaging
         interfaces:
