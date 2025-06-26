@@ -44,7 +44,7 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
     tracing::info!("Received deploy request: {:?}", payload);
 
     // Convert payload to a valid wadm file
-    let wadm_config = match config_converter::convert_pipeline(&payload.pipeline) {
+    let wadm_config = match config_converter::convert_pipeline(&payload.pipeline, &payload.workspace_slug) {
         Ok(config) => {
             tracing::info!("Successfully converted pipeline to WADM config");
             config
@@ -119,6 +119,8 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
 #[derive(Debug, Deserialize, Serialize)]
 struct DeployRequest {
     pipeline: Pipeline,
+    #[serde(rename = "workspaceSlug")]
+    workspace_slug: String,
 }
 
 #[derive(Deserialize, Serialize)]

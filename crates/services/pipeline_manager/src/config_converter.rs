@@ -6,15 +6,14 @@ use ts_rs::TS;
 const PIPELINE_TS_FILE_PATH: &str = "./pipeline.ts";
 const REGISTRY_URL: &'static str = match std::option_env!("REGISTRY_URL") {
     Some(url) => url,
-    None => "localhost:5000"
+    None => "localhost:5000",
 };
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
 pub struct Pipeline {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
+    pub version: String,
     pub nodes: Vec<PipelineNode>,
 }
 
@@ -197,6 +196,7 @@ pub struct LinkSource {
 
 pub fn convert_pipeline(
     pipeline: &Pipeline,
+    workspace_slug: &String,
 ) -> Result<WadmApplication, Box<dyn std::error::Error>> {
     let mut components = Vec::new();
     let mut step_topics = HashMap::new();
@@ -590,7 +590,10 @@ pub fn convert_pipeline(
                                     let mut props = BTreeMap::new();
                                     props.insert(
                                         "path".to_string(),
-                                        serde_yaml::Value::String(format!("/{}", pipeline.name)),
+                                        serde_yaml::Value::String(format!(
+                                            "/{}-{}-{}",
+                                            workspace_slug, pipeline.name, pipeline.version
+                                        )),
                                     );
                                     props
                                 },
@@ -693,16 +696,15 @@ pub fn convert_pipeline(
         api_version: "core.oam.dev/v1beta1".to_string(),
         kind: "Application".to_string(),
         metadata: Metadata {
-            name: pipeline.name.clone(),
+            name: format!(
+                "{}-{}-{}",
+                workspace_slug,
+                pipeline.name,
+                pipeline.version.clone()
+            ),
             annotations: {
                 let mut annotations = BTreeMap::new();
-                annotations.insert(
-                    "version".to_string(),
-                    pipeline
-                        .version
-                        .clone()
-                        .unwrap_or_else(|| "1.0.0".to_string()),
-                );
+                annotations.insert("version".to_string(), pipeline.version.clone());
                 annotations
             },
         },
@@ -981,7 +983,8 @@ spec:
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
         // Convert the pipeline to WadmApplication
-        let wadm_app = convert_pipeline(&pipeline).expect("Failed to convert pipeline");
+        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"))
+            .expect("Failed to convert pipeline");
 
         // Convert back to YAML
         let output_yaml =
@@ -1209,7 +1212,8 @@ spec:
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
         // Convert the pipeline to WadmApplication
-        let wadm_app = convert_pipeline(&pipeline).expect("Failed to convert pipeline");
+        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"))
+            .expect("Failed to convert pipeline");
 
         // Convert back to YAML
         let output_yaml =
