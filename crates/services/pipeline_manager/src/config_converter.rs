@@ -696,12 +696,7 @@ pub fn convert_pipeline(
         api_version: "core.oam.dev/v1beta1".to_string(),
         kind: "Application".to_string(),
         metadata: Metadata {
-            name: format!(
-                "{}-{}-{}",
-                workspace_slug,
-                pipeline.name,
-                pipeline.version.clone()
-            ),
+            name: format!("{}-{}", workspace_slug, pipeline.name,),
             annotations: {
                 let mut annotations = BTreeMap::new();
                 annotations.insert("version".to_string(), pipeline.version.clone());
