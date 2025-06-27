@@ -589,6 +589,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "custom-component-links-only-multiple-versions"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen 0.42.1",
+]
+
+[[package]]
 name = "customer"
 version = "0.1.0"
 dependencies = [

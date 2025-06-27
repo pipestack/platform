@@ -4,7 +4,7 @@ metadata:
   name: example-pipeline
   annotations:
     description: A test pipeline with a hard-coded wadm file and custom code
-    version: v0.0.1
+    version: v2.0.0
 spec:
   components:
     # Step 1
@@ -18,7 +18,8 @@ spec:
             instances: 1
         - type: link
           properties:
-            target: out-internal-for-in-http
+            target:
+              name: out-internal-for-in-http
             namespace: pipestack
             package: out
             interfaces: [out]
@@ -30,7 +31,7 @@ spec:
         config:
           - name: out-internal-for-in-http-config
             properties:
-              next-step-topic: test-pipeline-03-step-2-in
+              next-step-topic: example-pipeline-03-step-2-in
       traits:
         - type: spreadscaler
           properties:
@@ -48,10 +49,10 @@ spec:
       type: component
       properties:
         image: localhost:5000/pipestack/in-internal:0.0.1
-        config:
-          - name: custom-component-links-only-config
-            properties:
-              next-step-topic: test-pipeline-03-step-3-in
+        # config:
+        #   - name: custom-component-links-only-config
+        #     properties:
+        #       next-step-topic: example-pipeline-03-step-3-in
       traits:
         - type: spreadscaler
           properties:
@@ -72,7 +73,7 @@ spec:
     - name: custom-component-links-only
       type: component
       properties:
-        image: localhost:5000/pipestack/custom-component-links-only:0.0.1
+        image: localhost:5000/pipestack/custom-component-links-only:0.0.2
       traits:
         - type: spreadscaler
           properties:
@@ -85,7 +86,7 @@ spec:
         config:
           - name: out-internal-for-custom-component-links-only-config
             properties:
-              next-step-topic: test-pipeline-03-step-3-in
+              next-step-topic: example-pipeline-03-step-3-in
       traits:
         - type: spreadscaler
           properties:
@@ -98,7 +99,7 @@ spec:
             package: messaging
             interfaces: [consumer]
 
-    # Step 3a
+    # Step 3
     - name: in-internal-for-out-log-a
       type: component
       properties:
@@ -122,38 +123,6 @@ spec:
             interfaces: [out]
 
     - name: out-log-a
-      type: component
-      properties:
-        image: localhost:5000/pipestack/out-log:0.0.1
-      traits:
-        - type: spreadscaler
-          properties:
-            instances: 1
-
-    # Step 3b
-    - name: in-internal-for-out-log-b
-      type: component
-      properties:
-        image: localhost:5000/pipestack/in-internal:0.0.1
-      traits:
-        - type: spreadscaler
-          properties:
-            instances: 1
-        - type: link
-          properties:
-            target:
-              name: messaging-nats
-            namespace: wasmcloud
-            package: messaging
-            interfaces: [consumer]
-        - type: link
-          properties:
-            target: out-log-b
-            namespace: pipestack
-            package: out
-            interfaces: [out]
-
-    - name: out-log-b
       type: component
       properties:
         image: localhost:5000/pipestack/out-log:0.0.1
@@ -196,46 +165,43 @@ spec:
       type: capability
       properties:
         image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+        config:
+          - name: messaging-nats-config
+            properties:
+              cluster_uris: "nats://0.0.0.0:4222"
       traits:
         - type: spreadscaler
           properties:
-            instances: 5
+            instances: 1
         - type: link
           properties:
-            name: a
-            target:
-              name: in-internal-for-custom-component-links-only
+            name: messaging-nats-to-in-internal-for-custom-component-links-only-link
             namespace: wasmcloud
             package: messaging
-            interfaces: [handler]
+            interfaces:
+              - handler
             source:
+              name: messaging-nats
               config:
                 - name: subscription-1
                   properties:
-                    subscriptions: test-pipeline-03-step-2-in
+                    subscriptions: example-pipeline-03-step-2-in
+                    cluster_uris: nats://0.0.0.0:4222
+            target:
+              name: in-internal-for-custom-component-links-only
         - type: link
           properties:
-            name: b
-            target:
-              name: in-internal-for-out-log-a
+            name: messaging-nats-to-in-internal-for-out-log-a-link
             namespace: wasmcloud
             package: messaging
-            interfaces: [handler]
+            interfaces:
+              - handler
             source:
+              name: messaging-nats
               config:
                 - name: subscription-2
                   properties:
-                    subscriptions: test-pipeline-03-step-3-in
-        - type: link
-          properties:
-            name: c
+                    subscriptions: example-pipeline-03-step-3-in
+                    cluster_uris: nats://0.0.0.0:4222
             target:
-              name: in-internal-for-out-log-b
-            namespace: wasmcloud
-            package: messaging
-            interfaces: [handler]
-            source:
-              config:
-                - name: subscription-3
-                  properties:
-                    subscriptions: test-pipeline-03-step-3-in
+              name: in-internal-for-out-log-a
