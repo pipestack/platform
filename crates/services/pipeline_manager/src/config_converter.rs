@@ -208,14 +208,52 @@ pub fn convert_pipeline(
     let mut components = Vec::new();
     let mut step_topics = HashMap::new();
 
-    // Generate topic names for inter-step communication
-    let mut topic_counter = 2;
+    // Generate topic names for inter-step communication based on dependency depth
+    // Build a map of node names to their dependency depth
+    let mut node_depths = HashMap::new();
+
+    // Find root nodes (no dependencies)
+    for step in &pipeline.nodes {
+        if step.depends_on.is_none() || step.depends_on.as_ref().unwrap().is_empty() {
+            node_depths.insert(step.name.clone(), 1);
+        }
+    }
+
+    // Calculate depths for dependent nodes
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for step in &pipeline.nodes {
+            if let Some(depends_on) = &step.depends_on {
+                if !depends_on.is_empty() && !node_depths.contains_key(&step.name) {
+                    // Check if all dependencies have been processed
+                    let mut max_depth = 0;
+                    let mut all_deps_processed = true;
+                    for dep in depends_on {
+                        if let Some(&depth) = node_depths.get(dep) {
+                            max_depth = max_depth.max(depth);
+                        } else {
+                            all_deps_processed = false;
+                            break;
+                        }
+                    }
+                    if all_deps_processed {
+                        node_depths.insert(step.name.clone(), max_depth + 1);
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Generate topics for nodes that have dependencies
     for step in &pipeline.nodes {
         if let Some(depends_on) = &step.depends_on {
             if !depends_on.is_empty() {
-                let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, topic_counter);
-                step_topics.insert(step.name.clone(), topic);
-                topic_counter += 1;
+                if let Some(&depth) = node_depths.get(&step.name) {
+                    let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
+                    step_topics.insert(step.name.clone(), topic);
+                }
             }
         }
     }
@@ -534,10 +572,7 @@ pub fn convert_pipeline(
                 Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
-                        name: Some(format!(
-                            "httpserver-to-{}-link",
-                            http_step.name
-                        )),
+                        name: Some(format!("httpserver-to-{}-link", http_step.name)),
                         source: Some(LinkSource {
                             name: None,
                             config: vec![Config {
@@ -598,7 +633,9 @@ pub fn convert_pipeline(
                                     );
                                     props.insert(
                                         "cluster_uris".to_string(),
-                                        serde_yaml::Value::String("nats://nats.railway.internal:4222".to_string()),
+                                        serde_yaml::Value::String(
+                                            "nats://nats.railway.internal:4222".to_string(),
+                                        ),
                                     );
                                     props
                                 },
@@ -640,7 +677,9 @@ pub fn convert_pipeline(
                                     );
                                     props.insert(
                                         "cluster_uris".to_string(),
-                                        serde_yaml::Value::String("nats://nats.railway.internal:4222".to_string()),
+                                        serde_yaml::Value::String(
+                                            "nats://nats.railway.internal:4222".to_string(),
+                                        ),
                                     );
                                     props
                                 },
@@ -759,7 +798,7 @@ spec:
       config:
       - name: out-internal-for-in-http-webhook_http_1_1750048123367-config
         properties:
-          next-step-topic: test-workspace-untitled-pipeline-03-step-2-in
+          next-step-topic: test-workspace-untitled-pipeline-step-2-in
     traits:
     - type: spreadscaler
       properties:
@@ -809,7 +848,7 @@ spec:
       config:
       - name: out-internal-for-processor_wasm_2_1750048126167-config
         properties:
-          next-step-topic: test-workspace-untitled-pipeline-03-step-3-in
+          next-step-topic: test-workspace-untitled-pipeline-step-3-in
     traits:
     - type: spreadscaler
       properties:
@@ -887,7 +926,7 @@ spec:
       config:
       - name: messaging-nats-config
         properties:
-          cluster_uris: '"nats://0.0.0.0:4222"'
+          cluster_uris: nats://nats.railway.internal:4222
     traits:
     - type: spreadscaler
       properties:
@@ -900,8 +939,8 @@ spec:
           config:
           - name: subscription-1-config
             properties:
-              cluster_uris: '"nats://0.0.0.0:4222"'
-              subscriptions: test-workspace-untitled-pipeline-03-step-2-in
+              cluster_uris: nats://nats.railway.internal:4222
+              subscriptions: test-workspace-untitled-pipeline-step-2-in
         target:
           name: in-internal-for-processor_wasm_2_1750048126167
         namespace: wasmcloud
@@ -916,8 +955,8 @@ spec:
           config:
           - name: subscription-2-config
             properties:
-              cluster_uris: '"nats://0.0.0.0:4222"'
-              subscriptions: test-workspace-untitled-pipeline-03-step-3-in
+              cluster_uris: nats://nats.railway.internal:4222
+              subscriptions: test-workspace-untitled-pipeline-step-3-in
         target:
           name: in-internal-for-out-log_log_3_1750048128320
         namespace: wasmcloud
@@ -925,6 +964,301 @@ spec:
         interfaces:
         - handler"#;
 
+        // Parse the input YAML into a Pipeline struct
+        let pipeline: Pipeline =
+            serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
+
+        // Convert the pipeline to WadmApplication
+        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"))
+            .expect("Failed to convert pipeline");
+
+        // Convert back to YAML
+        let output_yaml =
+            serde_yaml::to_string(&wadm_app).expect("Failed to serialize WadmApplication to YAML");
+
+        // Compare with expected output
+        assert_eq!(output_yaml.trim(), expected_yaml.trim());
+    }
+
+    #[test]
+    fn test_convert_pipeline_3() {
+        let input_yaml = r#"
+name: untitled-pipeline
+version: 1.0.0
+nodes:
+  - name: in-http-webhook_http_1_1750048123367
+    type: in-http-webhook
+    position:
+      x: 100.0
+      y: 100.0
+  - name: processor_wasm_2_1750048126167
+    type: processor-wasm
+    source: file:///path/to/data-processor.wasm
+    instances: 1
+    position:
+      x: 200.0
+      y: 100.0
+    depends_on:
+      - in-http-webhook_http_1_1750048123367
+  - name: out-log_log_3_1750048128320
+    type: out-log
+    position:
+      x: 300.0
+      y: 100.0
+    depends_on:
+      - processor_wasm_2_1750048126167
+  - name: out-log_log_4_1750048128320
+    type: out-log
+    position:
+      x: 300.0
+      y: 100.0
+    depends_on:
+      - processor_wasm_2_1750048126167
+"#;
+
+        let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: test-workspace-untitled-pipeline
+  annotations:
+    version: 1.0.0
+spec:
+  components:
+  - name: in-http-webhook_http_1_1750048123367
+    type: component
+    properties:
+      image: localhost:5000/pipestack/in-http:0.0.1
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        target:
+          name: out-internal-for-in-http-webhook_http_1_1750048123367
+        namespace: pipestack
+        package: out
+        interfaces:
+        - out
+  - name: out-internal-for-in-http-webhook_http_1_1750048123367
+    type: component
+    properties:
+      image: localhost:5000/pipestack/out-internal:0.0.1
+      config:
+      - name: out-internal-for-in-http-webhook_http_1_1750048123367-config
+        properties:
+          next-step-topic: test-workspace-untitled-pipeline-step-2-in
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        target:
+          name: messaging-nats
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - consumer
+  - name: in-internal-for-processor_wasm_2_1750048126167
+    type: component
+    properties:
+      image: localhost:5000/pipestack/in-internal:0.0.1
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        target: processor_wasm_2_1750048126167
+        namespace: pipestack
+        package: customer
+        interfaces:
+        - customer
+    - type: link
+      properties:
+        target: out-internal-for-processor_wasm_2_1750048126167
+        namespace: pipestack
+        package: out
+        interfaces:
+        - out
+  - name: processor_wasm_2_1750048126167
+    type: component
+    properties:
+      image: file:///path/to/data-processor.wasm
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+  - name: out-internal-for-processor_wasm_2_1750048126167
+    type: component
+    properties:
+      image: localhost:5000/pipestack/out-internal:0.0.1
+      config:
+      - name: out-internal-for-processor_wasm_2_1750048126167-config
+        properties:
+          next-step-topic: test-workspace-untitled-pipeline-step-3-in
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        target:
+          name: messaging-nats
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - consumer
+  - name: in-internal-for-out-log_log_3_1750048128320
+    type: component
+    properties:
+      image: localhost:5000/pipestack/in-internal:0.0.1
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        target:
+          name: messaging-nats
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - consumer
+    - type: link
+      properties:
+        target: out-log_log_3_1750048128320
+        namespace: pipestack
+        package: out
+        interfaces:
+        - out
+  - name: out-log_log_3_1750048128320
+    type: component
+    properties:
+      image: localhost:5000/pipestack/out-log:0.0.1
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+  - name: in-internal-for-out-log_log_4_1750048128320
+    type: component
+    properties:
+      image: localhost:5000/pipestack/in-internal:0.0.1
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        target:
+          name: messaging-nats
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - consumer
+    - type: link
+      properties:
+        target: out-log_log_4_1750048128320
+        namespace: pipestack
+        package: out
+        interfaces:
+        - out
+  - name: out-log_log_4_1750048128320
+    type: component
+    properties:
+      image: localhost:5000/pipestack/out-log:0.0.1
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+  - name: httpserver
+    type: capability
+    properties:
+      image: ghcr.io/wasmcloud/http-server:0.27.0
+      config:
+      - name: default-http-config
+        properties:
+          address: 0.0.0.0:8000
+          routing_mode: path
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        name: httpserver-to-in-http-webhook_http_1_1750048123367-link
+        source:
+          config:
+          - name: path-config
+            properties:
+              path: /test-workspace-untitled-pipeline
+        target:
+          name: in-http-webhook_http_1_1750048123367
+        namespace: wasi
+        package: http
+        interfaces:
+        - incoming-handler
+  - name: messaging-nats
+    type: capability
+    properties:
+      image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      config:
+      - name: messaging-nats-config
+        properties:
+          cluster_uris: nats://nats.railway.internal:4222
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        name: messaging-nats-to-in-internal-for-processor_wasm_2_1750048126167-link
+        source:
+          name: messaging-nats
+          config:
+          - name: subscription-1-config
+            properties:
+              cluster_uris: nats://nats.railway.internal:4222
+              subscriptions: test-workspace-untitled-pipeline-step-2-in
+        target:
+          name: in-internal-for-processor_wasm_2_1750048126167
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - handler
+    - type: link
+      properties:
+        name: messaging-nats-to-in-internal-for-out-log_log_3_1750048128320-link
+        source:
+          name: messaging-nats
+          config:
+          - name: subscription-2-config
+            properties:
+              cluster_uris: nats://nats.railway.internal:4222
+              subscriptions: test-workspace-untitled-pipeline-step-3-in
+        target:
+          name: in-internal-for-out-log_log_3_1750048128320
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - handler
+    - type: link
+      properties:
+        name: messaging-nats-to-in-internal-for-out-log_log_4_1750048128320-link
+        source:
+          name: messaging-nats
+          config:
+          - name: subscription-3-config
+            properties:
+              cluster_uris: nats://nats.railway.internal:4222
+              subscriptions: test-workspace-untitled-pipeline-step-3-in
+        target:
+          name: in-internal-for-out-log_log_4_1750048128320
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - handler"#;
 
         // Parse the input YAML into a Pipeline struct
         let pipeline: Pipeline =
