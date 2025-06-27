@@ -174,12 +174,12 @@ pub enum TraitProperties {
 pub struct LinkProperties {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<LinkSource>,
     pub target: LinkTarget,
     pub namespace: String,
     pub package: String,
     pub interfaces: Vec<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source: Option<LinkSource>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -195,6 +195,9 @@ pub enum LinkTarget {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LinkSource {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config: Vec<Config>,
 }
 
@@ -335,7 +338,10 @@ pub fn convert_pipeline(
                                     namespace: "wasmcloud".to_string(),
                                     package: "messaging".to_string(),
                                     interfaces: vec!["consumer".to_string()],
-                                    source: None,
+                                    source: Some(LinkSource {
+                                        name: Some(format!("out_internal_for_{}", step.name)),
+                                        config: vec![],
+                                    }),
                                 }),
                             },
                         ],
@@ -467,7 +473,10 @@ pub fn convert_pipeline(
                                     namespace: "wasmcloud".to_string(),
                                     package: "messaging".to_string(),
                                     interfaces: vec!["consumer".to_string()],
-                                    source: None,
+                                    source: Some(LinkSource {
+                                        name: Some(format!("out_internal_for_{}", step.name)),
+                                        config: vec![],
+                                    }),
                                 }),
                             },
                         ],
@@ -532,7 +541,11 @@ pub fn convert_pipeline(
                 traits.push(Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
-                        name: None,
+                        name: if is_first_sibling && siblings_with_same_deps.len() > 1 {
+                            Some(format!("{}-link", step.name))
+                        } else {
+                            None
+                        },
                         target: LinkTarget::String(step.name.clone()),
                         namespace: "pipestack".to_string(),
                         package: "out".to_string(),
@@ -625,6 +638,7 @@ pub fn convert_pipeline(
                         package: "http".to_string(),
                         interfaces: vec!["incoming-handler".to_string()],
                         source: Some(LinkSource {
+                            name: None,
                             config: vec![Config {
                                 name: "path".to_string(),
                                 properties: {
@@ -662,7 +676,7 @@ pub fn convert_pipeline(
                 nats_traits.push(Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
-                        name: None,
+                        name: Some(format!("in_internal_for_{}-link", step.name)),
                         target: LinkTarget::Name {
                             name: format!("in_internal_for_{}", step.name),
                             config: None,
@@ -671,6 +685,7 @@ pub fn convert_pipeline(
                         package: "messaging".to_string(),
                         interfaces: vec!["handler".to_string()],
                         source: Some(LinkSource {
+                            name: None,
                             config: vec![Config {
                                 name: format!("subscription-{}", link_counter),
                                 properties: {
@@ -713,7 +728,7 @@ pub fn convert_pipeline(
                     nats_traits.push(Trait {
                         trait_type: "link".to_string(),
                         properties: TraitProperties::Link(LinkProperties {
-                            name: None,
+                            name: Some(format!("in_internal_for_{}-link", step.name)),
                             target: LinkTarget::Name {
                                 name: format!("in_internal_for_{}", step.name),
                                 config: Some(vec![Config {
@@ -732,6 +747,7 @@ pub fn convert_pipeline(
                             package: "messaging".to_string(),
                             interfaces: vec!["handler".to_string()],
                             source: Some(LinkSource {
+                                name: None,
                                 config: vec![Config {
                                     name: format!("subscription-{}", link_counter),
                                     properties: {
@@ -751,7 +767,7 @@ pub fn convert_pipeline(
                     nats_traits.push(Trait {
                         trait_type: "link".to_string(),
                         properties: TraitProperties::Link(LinkProperties {
-                            name: None,
+                            name: Some(format!("in_internal_for_{}-link", step.name)),
                             target: LinkTarget::Name {
                                 name: format!("in_internal_for_{}", step.name),
                                 config: None,
@@ -760,6 +776,7 @@ pub fn convert_pipeline(
                             package: "messaging".to_string(),
                             interfaces: vec!["handler".to_string()],
                             source: Some(LinkSource {
+                                name: None,
                                 config: vec![Config {
                                     name: format!("subscription-{}", link_counter),
                                     properties: {
@@ -779,7 +796,7 @@ pub fn convert_pipeline(
                     nats_traits.push(Trait {
                         trait_type: "link".to_string(),
                         properties: TraitProperties::Link(LinkProperties {
-                            name: None,
+                            name: Some(format!("in_internal_for_{}-link", step.name)),
                             target: LinkTarget::Name {
                                 name: format!("in_internal_for_{}", step.name),
                                 config: None,
@@ -788,6 +805,7 @@ pub fn convert_pipeline(
                             package: "messaging".to_string(),
                             interfaces: vec!["handler".to_string()],
                             source: Some(LinkSource {
+                                name: None,
                                 config: vec![Config {
                                     name: format!("subscription-{}", link_counter),
                                     properties: {
@@ -910,6 +928,8 @@ spec:
         instances: 1
     - type: link
       properties:
+        source:
+          name: out_internal_for_in-http_http_1_1750048123367
         target:
           name: messaging-nats
           config:
@@ -964,6 +984,8 @@ spec:
         instances: 1
     - type: link
       properties:
+        source:
+          name: out_internal_for_processor_wasm_2_1750048126167
         target:
           name: messaging-nats
           config:
@@ -984,6 +1006,7 @@ spec:
         instances: 1
     - type: link
       properties:
+        name: out-log_log_3_1750048128320-link
         target: out-log_log_3_1750048128320
         namespace: pipestack
         package: out
@@ -1048,17 +1071,17 @@ spec:
     - type: link
       properties:
         name: in-http_http_1_1750048123367-link
+        source:
+          config:
+          - name: path
+            properties:
+              path: /test-workspace-untitled-pipeline
         target:
           name: in-http_http_1_1750048123367
         namespace: wasi
         package: http
         interfaces:
         - incoming-handler
-        source:
-          config:
-          - name: path
-            properties:
-              path: /test-workspace-untitled-pipeline
   - name: messaging-nats
     type: capability
     properties:
@@ -1069,43 +1092,46 @@ spec:
         instances: 1
     - type: link
       properties:
+        name: in_internal_for_processor_wasm_2_1750048126167-link
+        source:
+          config:
+          - name: subscription-1
+            properties:
+              subscriptions: untitled-pipeline-step-2-in
         target:
           name: in_internal_for_processor_wasm_2_1750048126167
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
-        source:
-          config:
-          - name: subscription-1
-            properties:
-              subscriptions: untitled-pipeline-step-2-in
     - type: link
       properties:
+        name: in_internal_for_out-log_log_3_1750048128320-link
+        source:
+          config:
+          - name: subscription-2
+            properties:
+              subscriptions: untitled-pipeline-step-3-in
         target:
           name: in_internal_for_out-log_log_3_1750048128320
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
-        source:
-          config:
-          - name: subscription-2
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
     - type: link
       properties:
+        name: in_internal_for_out-log_log_4_1750048130049-link
+        source:
+          config:
+          - name: subscription-3
+            properties:
+              subscriptions: untitled-pipeline-step-3-in
         target:
           name: in_internal_for_out-log_log_4_1750048130049
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
-        source:
-          config:
-          - name: subscription-3
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
 "#;
 
         // Parse the input YAML into a Pipeline struct
@@ -1190,6 +1216,8 @@ spec:
         instances: 1
     - type: link
       properties:
+        source:
+          name: out_internal_for_in-http_http_1_1750048123367
         target:
           name: messaging-nats
           config:
@@ -1244,6 +1272,8 @@ spec:
         instances: 1
     - type: link
       properties:
+        source:
+          name: out_internal_for_processor_wasm_2_1750048126167
         target:
           name: messaging-nats
           config:
@@ -1293,17 +1323,17 @@ spec:
     - type: link
       properties:
         name: in-http_http_1_1750048123367-link
+        source:
+          config:
+          - name: path
+            properties:
+              path: /test-workspace-untitled-pipeline
         target:
           name: in-http_http_1_1750048123367
         namespace: wasi
         package: http
         interfaces:
         - incoming-handler
-        source:
-          config:
-          - name: path
-            properties:
-              path: /test-workspace-untitled-pipeline
   - name: messaging-nats
     type: capability
     properties:
@@ -1314,19 +1344,26 @@ spec:
         instances: 1
     - type: link
       properties:
+        name: in_internal_for_processor_wasm_2_1750048126167-link
+        source:
+          config:
+          - name: subscription-1
+            properties:
+              subscriptions: untitled-pipeline-step-2-in
         target:
           name: in_internal_for_processor_wasm_2_1750048126167
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
-        source:
-          config:
-          - name: subscription-1
-            properties:
-              subscriptions: untitled-pipeline-step-2-in
     - type: link
       properties:
+        name: in_internal_for_out-log_log_3_1750048128320-link
+        source:
+          config:
+          - name: subscription-2
+            properties:
+              subscriptions: untitled-pipeline-step-3-in
         target:
           name: in_internal_for_out-log_log_3_1750048128320
           config:
@@ -1337,11 +1374,6 @@ spec:
         package: messaging
         interfaces:
         - handler
-        source:
-          config:
-          - name: subscription-2
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
 "#;
 
         // Parse the input YAML into a Pipeline struct
