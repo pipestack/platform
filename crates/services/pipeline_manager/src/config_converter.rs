@@ -209,25 +209,13 @@ pub fn convert_pipeline(
     let mut step_topics = HashMap::new();
 
     // Generate topic names for inter-step communication
-    // Group steps by their dependencies to assign the same topic to steps with same dependencies
-    let mut dependency_groups: HashMap<String, String> = HashMap::new();
-    let mut topic_counter = 2; // Start from step 2 since step 1 is the input
-
+    let mut topic_counter = 2;
     for step in &pipeline.nodes {
         if let Some(depends_on) = &step.depends_on {
             if !depends_on.is_empty() {
-                let dependency_key = depends_on.join(",");
-                if !dependency_groups.contains_key(&dependency_key) {
-                    dependency_groups.insert(
-                        dependency_key.clone(),
-                        format!("{}-step-{}-in", pipeline.name, topic_counter),
-                    );
-                    topic_counter += 1;
-                }
-                step_topics.insert(
-                    step.name.clone(),
-                    dependency_groups[&dependency_key].clone(),
-                );
+                let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, topic_counter);
+                step_topics.insert(step.name.clone(), topic);
+                topic_counter += 1;
             }
         }
     }
@@ -255,50 +243,40 @@ pub fn convert_pipeline(
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
-                                target: LinkTarget::String(format!(
-                                    "out_internal_for_{}",
-                                    step.name
-                                )),
+                                source: None,
+                                target: LinkTarget::Name {
+                                    name: format!("out-internal-for-{}", step.name),
+                                    config: None,
+                                },
                                 namespace: "pipestack".to_string(),
                                 package: "out".to_string(),
                                 interfaces: vec!["out".to_string()],
-                                source: None,
                             }),
                         },
                     ],
                 });
 
                 // Add corresponding out-internal component
-                let next_topic = if let Some(depends_on) = step.depends_on.as_ref() {
-                    depends_on
-                        .iter()
-                        .filter_map(|dep| step_topics.get(dep))
-                        .next()
-                        .cloned()
-                        .unwrap_or_default()
-                } else {
-                    // Find steps that depend on this one
-                    pipeline
-                        .nodes
-                        .iter()
-                        .find(|s| {
-                            s.depends_on
-                                .as_ref()
-                                .map_or(false, |deps| deps.contains(&step.name))
-                        })
-                        .and_then(|s| step_topics.get(&s.name))
-                        .cloned()
-                        .unwrap_or_default()
-                };
+                let next_topic = pipeline
+                    .nodes
+                    .iter()
+                    .find(|s| {
+                        s.depends_on
+                            .as_ref()
+                            .map_or(false, |deps| deps.contains(&step.name))
+                    })
+                    .and_then(|s| step_topics.get(&s.name))
+                    .cloned()
+                    .unwrap_or_default();
 
                 if !next_topic.is_empty() {
                     components.push(Component {
-                        name: format!("out_internal_for_{}", step.name),
+                        name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
                             image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
                             config: vec![Config {
-                                name: format!("out_internal_for_{}-config", step.name),
+                                name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -318,30 +296,14 @@ pub fn convert_pipeline(
                                 trait_type: "link".to_string(),
                                 properties: TraitProperties::Link(LinkProperties {
                                     name: None,
+                                    source: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
-                                        config: Some(vec![Config {
-                                            name: format!(
-                                                "out_internal_for_{}-messaging-nats-config",
-                                                step.name
-                                            ),
-                                            properties: {
-                                                let mut props = BTreeMap::new();
-                                                props.insert(
-                                                    "subscriptions".to_string(),
-                                                    serde_yaml::Value::String(next_topic.clone()),
-                                                );
-                                                props
-                                            },
-                                        }]),
+                                        config: None,
                                     },
                                     namespace: "wasmcloud".to_string(),
                                     package: "messaging".to_string(),
                                     interfaces: vec!["consumer".to_string()],
-                                    source: Some(LinkSource {
-                                        name: Some(format!("out_internal_for_{}", step.name)),
-                                        config: vec![],
-                                    }),
                                 }),
                             },
                         ],
@@ -349,8 +311,9 @@ pub fn convert_pipeline(
                 }
             }
             PipelineNodeType::ProcessorWasm => {
+                // Add in-internal component for processor
                 components.push(Component {
-                    name: format!("in_internal_for_{}", step.name),
+                    name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
                         image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
@@ -365,25 +328,25 @@ pub fn convert_pipeline(
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
+                                source: None,
                                 target: LinkTarget::String(step.name.clone()),
                                 namespace: "pipestack".to_string(),
                                 package: "customer".to_string(),
                                 interfaces: vec!["customer".to_string()],
-                                source: None,
                             }),
                         },
                         Trait {
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
+                                source: None,
                                 target: LinkTarget::String(format!(
-                                    "out_internal_for_{}",
+                                    "out-internal-for-{}",
                                     step.name
                                 )),
                                 namespace: "pipestack".to_string(),
                                 package: "out".to_string(),
                                 interfaces: vec!["out".to_string()],
-                                source: None,
                             }),
                         },
                     ],
@@ -412,31 +375,31 @@ pub fn convert_pipeline(
                 });
 
                 // Add out-internal component for processor
-                let next_topics: Vec<String> = pipeline
+                let next_topic = pipeline
                     .nodes
                     .iter()
-                    .filter(|s| {
+                    .find(|s| {
                         s.depends_on
                             .as_ref()
                             .map_or(false, |deps| deps.contains(&step.name))
                     })
-                    .filter_map(|s| step_topics.get(&s.name))
+                    .and_then(|s| step_topics.get(&s.name))
                     .cloned()
-                    .collect();
+                    .unwrap_or_default();
 
-                if !next_topics.is_empty() {
+                if !next_topic.is_empty() {
                     components.push(Component {
-                        name: format!("out_internal_for_{}", step.name),
+                        name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
                             image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
                             config: vec![Config {
-                                name: format!("out_internal_for_{}-config", step.name),
+                                name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
                                         "next-step-topic".to_string(),
-                                        serde_yaml::Value::String(next_topics[0].clone()),
+                                        serde_yaml::Value::String(next_topic.clone()),
                                     );
                                     props
                                 },
@@ -451,32 +414,14 @@ pub fn convert_pipeline(
                                 trait_type: "link".to_string(),
                                 properties: TraitProperties::Link(LinkProperties {
                                     name: None,
+                                    source: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
-                                        config: Some(vec![Config {
-                                            name: format!(
-                                                "out_internal_for_{}-messaging-nats-config",
-                                                step.name
-                                            ),
-                                            properties: {
-                                                let mut props = BTreeMap::new();
-                                                props.insert(
-                                                    "subscriptions".to_string(),
-                                                    serde_yaml::Value::String(
-                                                        next_topics[0].clone(),
-                                                    ),
-                                                );
-                                                props
-                                            },
-                                        }]),
+                                        config: None,
                                     },
                                     namespace: "wasmcloud".to_string(),
                                     package: "messaging".to_string(),
                                     interfaces: vec!["consumer".to_string()],
-                                    source: Some(LinkSource {
-                                        name: Some(format!("out_internal_for_{}", step.name)),
-                                        config: vec![],
-                                    }),
                                 }),
                             },
                         ],
@@ -484,85 +429,45 @@ pub fn convert_pipeline(
                 }
             }
             PipelineNodeType::OutLog => {
-                // Check if this step has multiple out-log siblings (same dependencies)
-                let siblings_with_same_deps: Vec<_> = pipeline
-                    .nodes
-                    .iter()
-                    .filter(|s| matches!(s.step_type, PipelineNodeType::OutLog))
-                    .filter(|s| s.depends_on == step.depends_on)
-                    .collect();
-
-                let is_first_sibling = siblings_with_same_deps
-                    .first()
-                    .map(|s| s.name == step.name)
-                    .unwrap_or(true);
-
-                let mut traits = vec![Trait {
-                    trait_type: "spreadscaler".to_string(),
-                    properties: TraitProperties::Spreadscaler {
-                        instances: step.instances.unwrap_or(1),
-                    },
-                }];
-
-                // Add messaging-nats link for non-first siblings
-                if !is_first_sibling {
-                    traits.push(Trait {
-                        trait_type: "link".to_string(),
-                        properties: TraitProperties::Link(LinkProperties {
-                            name: None,
-                            target: LinkTarget::Name {
-                                name: "messaging-nats".to_string(),
-                                config: Some(vec![Config {
-                                    name: format!(
-                                        "out_internal_for_{}-messaging-nats-config",
-                                        step.name
-                                    ),
-                                    properties: {
-                                        let mut props = BTreeMap::new();
-                                        props.insert(
-                                            "subscriptions".to_string(),
-                                            serde_yaml::Value::String(
-                                                step_topics.get(&step.name).unwrap().clone(),
-                                            ),
-                                        );
-                                        props
-                                    },
-                                }]),
-                            },
-                            namespace: "wasmcloud".to_string(),
-                            package: "messaging".to_string(),
-                            interfaces: vec!["consumer".to_string()],
-                            source: None,
-                        }),
-                    });
-                }
-
-                // Add out-log link
-                traits.push(Trait {
-                    trait_type: "link".to_string(),
-                    properties: TraitProperties::Link(LinkProperties {
-                        name: if is_first_sibling && siblings_with_same_deps.len() > 1 {
-                            Some(format!("{}-link", step.name))
-                        } else {
-                            None
-                        },
-                        target: LinkTarget::String(step.name.clone()),
-                        namespace: "pipestack".to_string(),
-                        package: "out".to_string(),
-                        interfaces: vec!["out".to_string()],
-                        source: None,
-                    }),
-                });
-
                 // Add in-internal component for out-log
                 components.push(Component {
-                    name: format!("in_internal_for_{}", step.name),
+                    name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
                         image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
                         config: vec![],
                     },
-                    traits,
+                    traits: vec![
+                        Trait {
+                            trait_type: "spreadscaler".to_string(),
+                            properties: TraitProperties::Spreadscaler { instances: 1 },
+                        },
+                        Trait {
+                            trait_type: "link".to_string(),
+                            properties: TraitProperties::Link(LinkProperties {
+                                name: None,
+                                source: None,
+                                target: LinkTarget::Name {
+                                    name: "messaging-nats".to_string(),
+                                    config: None,
+                                },
+                                namespace: "wasmcloud".to_string(),
+                                package: "messaging".to_string(),
+                                interfaces: vec!["consumer".to_string()],
+                            }),
+                        },
+                        Trait {
+                            trait_type: "link".to_string(),
+                            properties: TraitProperties::Link(LinkProperties {
+                                name: None,
+                                source: None,
+                                target: LinkTarget::String(step.name.clone()),
+                                namespace: "pipestack".to_string(),
+                                package: "out".to_string(),
+                                interfaces: vec!["out".to_string()],
+                            }),
+                        },
+                    ],
                 });
 
                 // Add the out-log component itself
@@ -629,18 +534,14 @@ pub fn convert_pipeline(
                 Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
-                        name: Some(format!("{}-link", http_step.name)),
-                        target: LinkTarget::Name {
-                            name: http_step.name.clone(),
-                            config: None,
-                        },
-                        namespace: "wasi".to_string(),
-                        package: "http".to_string(),
-                        interfaces: vec!["incoming-handler".to_string()],
+                        name: Some(format!(
+                            "httpserver-to-{}-link",
+                            http_step.name
+                        )),
                         source: Some(LinkSource {
                             name: None,
                             config: vec![Config {
-                                name: "path".to_string(),
+                                name: "path-config".to_string(),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -654,6 +555,13 @@ pub fn convert_pipeline(
                                 },
                             }],
                         }),
+                        target: LinkTarget::Name {
+                            name: http_step.name.clone(),
+                            config: None,
+                        },
+                        namespace: "wasi".to_string(),
+                        package: "http".to_string(),
+                        interfaces: vec!["incoming-handler".to_string()],
                     }),
                 },
             ],
@@ -666,162 +574,88 @@ pub fn convert_pipeline(
         properties: TraitProperties::Spreadscaler { instances: 1 },
     }];
 
-    // Add link traits for each step that needs messaging in the correct order
-    let mut link_counter = 1;
-
-    // First add the processor step link
+    // Add messaging-nats links
+    let mut subscription_counter = 1;
     for step in &pipeline.nodes {
         if matches!(step.step_type, PipelineNodeType::ProcessorWasm) {
             if let Some(topic) = step_topics.get(&step.name) {
                 nats_traits.push(Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
-                        name: Some(format!("in_internal_for_{}-link", step.name)),
-                        target: LinkTarget::Name {
-                            name: format!("in_internal_for_{}", step.name),
-                            config: None,
-                        },
-                        namespace: "wasmcloud".to_string(),
-                        package: "messaging".to_string(),
-                        interfaces: vec!["handler".to_string()],
+                        name: Some(format!(
+                            "messaging-nats-to-in-internal-for-{}-link",
+                            step.name
+                        )),
                         source: Some(LinkSource {
-                            name: None,
+                            name: Some("messaging-nats".to_string()),
                             config: vec![Config {
-                                name: format!("subscription-{}", link_counter),
+                                name: format!("subscription-{}-config", subscription_counter),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
                                         "subscriptions".to_string(),
                                         serde_yaml::Value::String(topic.clone()),
                                     );
+                                    props.insert(
+                                        "cluster_uris".to_string(),
+                                        serde_yaml::Value::String("nats://nats.railway.internal:4222".to_string()),
+                                    );
                                     props
                                 },
                             }],
                         }),
+                        target: LinkTarget::Name {
+                            name: format!("in-internal-for-{}", step.name),
+                            config: None,
+                        },
+                        namespace: "wasmcloud".to_string(),
+                        package: "messaging".to_string(),
+                        interfaces: vec!["handler".to_string()],
                     }),
                 });
-                link_counter += 1;
+                subscription_counter += 1;
             }
         }
     }
 
-    // Then add the out-log step links
     for step in &pipeline.nodes {
         if matches!(step.step_type, PipelineNodeType::OutLog) {
             if let Some(topic) = step_topics.get(&step.name) {
-                // Check if this is the first out-log step with these dependencies
-                let siblings_with_same_deps: Vec<_> = pipeline
-                    .nodes
-                    .iter()
-                    .filter(|s| matches!(s.step_type, PipelineNodeType::OutLog))
-                    .filter(|s| s.depends_on == step.depends_on)
-                    .collect();
-
-                let is_first_sibling = siblings_with_same_deps
-                    .first()
-                    .map(|s| s.name == step.name)
-                    .unwrap_or(true);
-                let has_multiple_siblings = siblings_with_same_deps.len() > 1;
-
-                if is_first_sibling && !has_multiple_siblings {
-                    // Single out-log step gets config in target
-                    nats_traits.push(Trait {
-                        trait_type: "link".to_string(),
-                        properties: TraitProperties::Link(LinkProperties {
-                            name: Some(format!("in_internal_for_{}-link", step.name)),
-                            target: LinkTarget::Name {
-                                name: format!("in_internal_for_{}", step.name),
-                                config: Some(vec![Config {
-                                    name: format!("out_internal_for_{}-config", step.name),
-                                    properties: {
-                                        let mut props = BTreeMap::new();
-                                        props.insert(
-                                            "subscriptions".to_string(),
-                                            serde_yaml::Value::String(topic.clone()),
-                                        );
-                                        props
-                                    },
-                                }]),
-                            },
-                            namespace: "wasmcloud".to_string(),
-                            package: "messaging".to_string(),
-                            interfaces: vec!["handler".to_string()],
-                            source: Some(LinkSource {
-                                name: None,
-                                config: vec![Config {
-                                    name: format!("subscription-{}", link_counter),
-                                    properties: {
-                                        let mut props = BTreeMap::new();
-                                        props.insert(
-                                            "subscriptions".to_string(),
-                                            serde_yaml::Value::String(topic.clone()),
-                                        );
-                                        props
-                                    },
-                                }],
-                            }),
+                nats_traits.push(Trait {
+                    trait_type: "link".to_string(),
+                    properties: TraitProperties::Link(LinkProperties {
+                        name: Some(format!(
+                            "messaging-nats-to-in-internal-for-{}-link",
+                            step.name
+                        )),
+                        source: Some(LinkSource {
+                            name: Some("messaging-nats".to_string()),
+                            config: vec![Config {
+                                name: format!("subscription-{}-config", subscription_counter),
+                                properties: {
+                                    let mut props = BTreeMap::new();
+                                    props.insert(
+                                        "subscriptions".to_string(),
+                                        serde_yaml::Value::String(topic.clone()),
+                                    );
+                                    props.insert(
+                                        "cluster_uris".to_string(),
+                                        serde_yaml::Value::String("nats://nats.railway.internal:4222".to_string()),
+                                    );
+                                    props
+                                },
+                            }],
                         }),
-                    });
-                } else if is_first_sibling && has_multiple_siblings {
-                    // First sibling of multiple gets no config in target
-                    nats_traits.push(Trait {
-                        trait_type: "link".to_string(),
-                        properties: TraitProperties::Link(LinkProperties {
-                            name: Some(format!("in_internal_for_{}-link", step.name)),
-                            target: LinkTarget::Name {
-                                name: format!("in_internal_for_{}", step.name),
-                                config: None,
-                            },
-                            namespace: "wasmcloud".to_string(),
-                            package: "messaging".to_string(),
-                            interfaces: vec!["handler".to_string()],
-                            source: Some(LinkSource {
-                                name: None,
-                                config: vec![Config {
-                                    name: format!("subscription-{}", link_counter),
-                                    properties: {
-                                        let mut props = BTreeMap::new();
-                                        props.insert(
-                                            "subscriptions".to_string(),
-                                            serde_yaml::Value::String(topic.clone()),
-                                        );
-                                        props
-                                    },
-                                }],
-                            }),
-                        }),
-                    });
-                } else {
-                    // Non-first siblings get no name and no target config
-                    nats_traits.push(Trait {
-                        trait_type: "link".to_string(),
-                        properties: TraitProperties::Link(LinkProperties {
-                            name: Some(format!("in_internal_for_{}-link", step.name)),
-                            target: LinkTarget::Name {
-                                name: format!("in_internal_for_{}", step.name),
-                                config: None,
-                            },
-                            namespace: "wasmcloud".to_string(),
-                            package: "messaging".to_string(),
-                            interfaces: vec!["handler".to_string()],
-                            source: Some(LinkSource {
-                                name: None,
-                                config: vec![Config {
-                                    name: format!("subscription-{}", link_counter),
-                                    properties: {
-                                        let mut props = BTreeMap::new();
-                                        props.insert(
-                                            "subscriptions".to_string(),
-                                            serde_yaml::Value::String(topic.clone()),
-                                        );
-                                        props
-                                    },
-                                }],
-                            }),
-                        }),
-                    });
-                }
-                link_counter += 1;
+                        target: LinkTarget::Name {
+                            name: format!("in-internal-for-{}", step.name),
+                            config: None,
+                        },
+                        namespace: "wasmcloud".to_string(),
+                        package: "messaging".to_string(),
+                        interfaces: vec!["handler".to_string()],
+                    }),
+                });
+                subscription_counter += 1;
             }
         }
     }
@@ -831,7 +665,17 @@ pub fn convert_pipeline(
         component_type: "capability".to_string(),
         properties: Properties {
             image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
-            config: vec![],
+            config: vec![Config {
+                name: "messaging-nats-config".to_string(),
+                properties: {
+                    let mut props = BTreeMap::new();
+                    props.insert(
+                        "cluster_uris".to_string(),
+                        serde_yaml::Value::String("nats://nats.railway.internal:4222".to_string()),
+                    );
+                    props
+                },
+            }],
         },
         traits: nats_traits,
     });
@@ -856,307 +700,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_convert_pipeline() {
-        let input_yaml = r#"
-name: untitled-pipeline
-version: 0.0.1
-nodes:
-  - name: in-http_http_1_1750048123367
-    type: in-http-webhook
-    position:
-      x: 100.0
-      y: 100.0
-  - name: processor_wasm_2_1750048126167
-    type: processor-wasm
-    source: file:///path/to/data-processor.wasm
-    instances: 4
-    position:
-      x: 200.0
-      y: 100.0
-    depends_on:
-      - in-http_http_1_1750048123367
-  - name: out-log_log_3_1750048128320
-    type: out-log
-    position:
-      x: 300.0
-      y: 100.0
-    depends_on:
-      - processor_wasm_2_1750048126167
-  - name: out-log_log_4_1750048130049
-    type: out-log
-    position:
-      x: 300.0
-      y: 200.0
-    depends_on:
-      - processor_wasm_2_1750048126167
-"#;
-
-        let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
-kind: Application
-metadata:
-  name: test-workspace-untitled-pipeline
-  annotations:
-    version: 0.0.1
-spec:
-  components:
-  - name: in-http_http_1_1750048123367
-    type: component
-    properties:
-      image: localhost:5000/pipestack/in-http:0.0.1
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        target: out_internal_for_in-http_http_1_1750048123367
-        namespace: pipestack
-        package: out
-        interfaces:
-        - out
-  - name: out_internal_for_in-http_http_1_1750048123367
-    type: component
-    properties:
-      image: localhost:5000/pipestack/out-internal:0.0.1
-      config:
-      - name: out_internal_for_in-http_http_1_1750048123367-config
-        properties:
-          next-step-topic: untitled-pipeline-step-2-in
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        source:
-          name: out_internal_for_in-http_http_1_1750048123367
-        target:
-          name: messaging-nats
-          config:
-          - name: out_internal_for_in-http_http_1_1750048123367-messaging-nats-config
-            properties:
-              subscriptions: untitled-pipeline-step-2-in
-        namespace: wasmcloud
-        package: messaging
-        interfaces:
-        - consumer
-  - name: in_internal_for_processor_wasm_2_1750048126167
-    type: component
-    properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        target: processor_wasm_2_1750048126167
-        namespace: pipestack
-        package: customer
-        interfaces:
-        - customer
-    - type: link
-      properties:
-        target: out_internal_for_processor_wasm_2_1750048126167
-        namespace: pipestack
-        package: out
-        interfaces:
-        - out
-  - name: processor_wasm_2_1750048126167
-    type: component
-    properties:
-      image: file:///path/to/data-processor.wasm
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 4
-  - name: out_internal_for_processor_wasm_2_1750048126167
-    type: component
-    properties:
-      image: localhost:5000/pipestack/out-internal:0.0.1
-      config:
-      - name: out_internal_for_processor_wasm_2_1750048126167-config
-        properties:
-          next-step-topic: untitled-pipeline-step-3-in
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        source:
-          name: out_internal_for_processor_wasm_2_1750048126167
-        target:
-          name: messaging-nats
-          config:
-          - name: out_internal_for_processor_wasm_2_1750048126167-messaging-nats-config
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
-        namespace: wasmcloud
-        package: messaging
-        interfaces:
-        - consumer
-  - name: in_internal_for_out-log_log_3_1750048128320
-    type: component
-    properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        name: out-log_log_3_1750048128320-link
-        target: out-log_log_3_1750048128320
-        namespace: pipestack
-        package: out
-        interfaces:
-        - out
-  - name: out-log_log_3_1750048128320
-    type: component
-    properties:
-      image: localhost:5000/pipestack/out-log:0.0.1
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-  - name: in_internal_for_out-log_log_4_1750048130049
-    type: component
-    properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        target:
-          name: messaging-nats
-          config:
-          - name: out_internal_for_out-log_log_4_1750048130049-messaging-nats-config
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
-        namespace: wasmcloud
-        package: messaging
-        interfaces:
-        - consumer
-    - type: link
-      properties:
-        target: out-log_log_4_1750048130049
-        namespace: pipestack
-        package: out
-        interfaces:
-        - out
-  - name: out-log_log_4_1750048130049
-    type: component
-    properties:
-      image: localhost:5000/pipestack/out-log:0.0.1
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-  - name: httpserver
-    type: capability
-    properties:
-      image: ghcr.io/wasmcloud/http-server:0.27.0
-      config:
-      - name: default-http-config
-        properties:
-          address: 0.0.0.0:8000
-          routing_mode: path
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        name: in-http_http_1_1750048123367-link
-        source:
-          config:
-          - name: path
-            properties:
-              path: /test-workspace-untitled-pipeline
-        target:
-          name: in-http_http_1_1750048123367
-        namespace: wasi
-        package: http
-        interfaces:
-        - incoming-handler
-  - name: messaging-nats
-    type: capability
-    properties:
-      image: ghcr.io/wasmcloud/messaging-nats:0.27.0
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        name: in_internal_for_processor_wasm_2_1750048126167-link
-        source:
-          config:
-          - name: subscription-1
-            properties:
-              subscriptions: untitled-pipeline-step-2-in
-        target:
-          name: in_internal_for_processor_wasm_2_1750048126167
-        namespace: wasmcloud
-        package: messaging
-        interfaces:
-        - handler
-    - type: link
-      properties:
-        name: in_internal_for_out-log_log_3_1750048128320-link
-        source:
-          config:
-          - name: subscription-2
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
-        target:
-          name: in_internal_for_out-log_log_3_1750048128320
-        namespace: wasmcloud
-        package: messaging
-        interfaces:
-        - handler
-    - type: link
-      properties:
-        name: in_internal_for_out-log_log_4_1750048130049-link
-        source:
-          config:
-          - name: subscription-3
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
-        target:
-          name: in_internal_for_out-log_log_4_1750048130049
-        namespace: wasmcloud
-        package: messaging
-        interfaces:
-        - handler
-"#;
-
-        // Parse the input YAML into a Pipeline struct
-        let pipeline: Pipeline =
-            serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
-
-        // Convert the pipeline to WadmApplication
-        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"))
-            .expect("Failed to convert pipeline");
-
-        // Convert back to YAML
-        let output_yaml =
-            serde_yaml::to_string(&wadm_app).expect("Failed to serialize WadmApplication to YAML");
-
-        // Compare with expected output
-        assert_eq!(output_yaml.trim(), expected_yaml.trim());
-    }
-
-    #[test]
     fn test_convert_pipeline_2() {
         let input_yaml = r#"
 name: untitled-pipeline
-version: 0.0.1
+version: 1.0.0
 nodes:
-  - name: in-http_http_1_1750048123367
+  - name: in-http-webhook_http_1_1750048123367
     type: in-http-webhook
     position:
       x: 100.0
@@ -1164,12 +713,12 @@ nodes:
   - name: processor_wasm_2_1750048126167
     type: processor-wasm
     source: file:///path/to/data-processor.wasm
-    instances: 4
+    instances: 1
     position:
       x: 200.0
       y: 100.0
     depends_on:
-      - in-http_http_1_1750048123367
+      - in-http-webhook_http_1_1750048123367
   - name: out-log_log_3_1750048128320
     type: out-log
     position:
@@ -1184,10 +733,10 @@ kind: Application
 metadata:
   name: test-workspace-untitled-pipeline
   annotations:
-    version: 0.0.1
+    version: 1.0.0
 spec:
   components:
-  - name: in-http_http_1_1750048123367
+  - name: in-http-webhook_http_1_1750048123367
     type: component
     properties:
       image: localhost:5000/pipestack/in-http:0.0.1
@@ -1197,38 +746,33 @@ spec:
         instances: 1
     - type: link
       properties:
-        target: out_internal_for_in-http_http_1_1750048123367
+        target:
+          name: out-internal-for-in-http-webhook_http_1_1750048123367
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out_internal_for_in-http_http_1_1750048123367
+  - name: out-internal-for-in-http-webhook_http_1_1750048123367
     type: component
     properties:
       image: localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out_internal_for_in-http_http_1_1750048123367-config
+      - name: out-internal-for-in-http-webhook_http_1_1750048123367-config
         properties:
-          next-step-topic: untitled-pipeline-step-2-in
+          next-step-topic: test-workspace-untitled-pipeline-03-step-2-in
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        source:
-          name: out_internal_for_in-http_http_1_1750048123367
         target:
           name: messaging-nats
-          config:
-          - name: out_internal_for_in-http_http_1_1750048123367-messaging-nats-config
-            properties:
-              subscriptions: untitled-pipeline-step-2-in
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
-  - name: in_internal_for_processor_wasm_2_1750048126167
+  - name: in-internal-for-processor_wasm_2_1750048126167
     type: component
     properties:
       image: localhost:5000/pipestack/in-internal:0.0.1
@@ -1245,7 +789,7 @@ spec:
         - customer
     - type: link
       properties:
-        target: out_internal_for_processor_wasm_2_1750048126167
+        target: out-internal-for-processor_wasm_2_1750048126167
         namespace: pipestack
         package: out
         interfaces:
@@ -1257,34 +801,28 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 4
-  - name: out_internal_for_processor_wasm_2_1750048126167
+        instances: 1
+  - name: out-internal-for-processor_wasm_2_1750048126167
     type: component
     properties:
       image: localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out_internal_for_processor_wasm_2_1750048126167-config
+      - name: out-internal-for-processor_wasm_2_1750048126167-config
         properties:
-          next-step-topic: untitled-pipeline-step-3-in
+          next-step-topic: test-workspace-untitled-pipeline-03-step-3-in
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        source:
-          name: out_internal_for_processor_wasm_2_1750048126167
         target:
           name: messaging-nats
-          config:
-          - name: out_internal_for_processor_wasm_2_1750048126167-messaging-nats-config
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
-  - name: in_internal_for_out-log_log_3_1750048128320
+  - name: in-internal-for-out-log_log_3_1750048128320
     type: component
     properties:
       image: localhost:5000/pipestack/in-internal:0.0.1
@@ -1292,6 +830,14 @@ spec:
     - type: spreadscaler
       properties:
         instances: 1
+    - type: link
+      properties:
+        target:
+          name: messaging-nats
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - consumer
     - type: link
       properties:
         target: out-log_log_3_1750048128320
@@ -1322,14 +868,14 @@ spec:
         instances: 1
     - type: link
       properties:
-        name: in-http_http_1_1750048123367-link
+        name: httpserver-to-in-http-webhook_http_1_1750048123367-link
         source:
           config:
-          - name: path
+          - name: path-config
             properties:
               path: /test-workspace-untitled-pipeline
         target:
-          name: in-http_http_1_1750048123367
+          name: in-http-webhook_http_1_1750048123367
         namespace: wasi
         package: http
         interfaces:
@@ -1338,43 +884,47 @@ spec:
     type: capability
     properties:
       image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      config:
+      - name: messaging-nats-config
+        properties:
+          cluster_uris: '"nats://0.0.0.0:4222"'
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        name: in_internal_for_processor_wasm_2_1750048126167-link
+        name: messaging-nats-to-in-internal-for-processor_wasm_2_1750048126167-link
         source:
+          name: messaging-nats
           config:
-          - name: subscription-1
+          - name: subscription-1-config
             properties:
-              subscriptions: untitled-pipeline-step-2-in
+              cluster_uris: '"nats://0.0.0.0:4222"'
+              subscriptions: test-workspace-untitled-pipeline-03-step-2-in
         target:
-          name: in_internal_for_processor_wasm_2_1750048126167
+          name: in-internal-for-processor_wasm_2_1750048126167
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
     - type: link
       properties:
-        name: in_internal_for_out-log_log_3_1750048128320-link
+        name: messaging-nats-to-in-internal-for-out-log_log_3_1750048128320-link
         source:
+          name: messaging-nats
           config:
-          - name: subscription-2
+          - name: subscription-2-config
             properties:
-              subscriptions: untitled-pipeline-step-3-in
+              cluster_uris: '"nats://0.0.0.0:4222"'
+              subscriptions: test-workspace-untitled-pipeline-03-step-3-in
         target:
-          name: in_internal_for_out-log_log_3_1750048128320
-          config:
-          - name: out_internal_for_out-log_log_3_1750048128320-config
-            properties:
-              subscriptions: untitled-pipeline-step-3-in
+          name: in-internal-for-out-log_log_3_1750048128320
         namespace: wasmcloud
         package: messaging
         interfaces:
-        - handler
-"#;
+        - handler"#;
+
 
         // Parse the input YAML into a Pipeline struct
         let pipeline: Pipeline =
