@@ -325,41 +325,12 @@ pub fn convert_pipeline(
                 }
             }
             PipelineNodeType::ProcessorWasm => {
-                // Add in-internal component
-                let next_topics: Vec<String> = pipeline
-                    .nodes
-                    .iter()
-                    .filter(|s| {
-                        s.depends_on
-                            .as_ref()
-                            .map_or(false, |deps| deps.contains(&step.name))
-                    })
-                    .filter_map(|s| step_topics.get(&s.name))
-                    .cloned()
-                    .collect();
-
-                let config = if !next_topics.is_empty() {
-                    vec![Config {
-                        name: format!("{}-config", step.name),
-                        properties: {
-                            let mut props = BTreeMap::new();
-                            props.insert(
-                                "next-step-topic".to_string(),
-                                serde_yaml::Value::String(next_topics[0].clone()),
-                            );
-                            props
-                        },
-                    }]
-                } else {
-                    vec![]
-                };
-
                 components.push(Component {
                     name: format!("in_internal_for_{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
                         image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
-                        config,
+                        config: vec![]
                     },
                     traits: vec![
                         Trait {
