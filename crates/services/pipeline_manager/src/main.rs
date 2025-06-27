@@ -92,13 +92,13 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
     .unwrap();
 
     // TODO: Only undeploy and delete the manifest in DEV, not PROD
-    tracing::info!("Undeploying manifest: {}", &wadm_config.metadata.name);
-    let _ = client.undeploy_manifest(&wadm_config.metadata.name).await;
-    tracing::info!("Deleting manifest: {}", &wadm_config.metadata.name);
-    client
-        .delete_manifest(&wadm_config.metadata.name, None)
-        .await
-        .unwrap();
+    // tracing::info!("Undeploying manifest: {}", &wadm_config.metadata.name);
+    // let _ = client.undeploy_manifest(&wadm_config.metadata.name).await;
+    // tracing::info!("Deleting manifest: {}", &wadm_config.metadata.name);
+    // client
+    //     .delete_manifest(&wadm_config.metadata.name, None)
+    //     .await
+    //     .unwrap();
     tracing::info!(
         "Putting and deploying manifest: {}",
         &wadm_config.metadata.name
