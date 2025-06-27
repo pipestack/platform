@@ -185,7 +185,11 @@ pub struct LinkProperties {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum LinkTarget {
-    Name { name: String },
+    Name {
+        name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        config: Option<Vec<Config>>,
+    },
     String(String),
 }
 
@@ -296,7 +300,7 @@ pub fn convert_pipeline(
                                     let mut props = BTreeMap::new();
                                     props.insert(
                                         "next-step-topic".to_string(),
-                                        serde_yaml::Value::String(next_topic),
+                                        serde_yaml::Value::String(next_topic.clone()),
                                     );
                                     props
                                 },
@@ -313,6 +317,19 @@ pub fn convert_pipeline(
                                     name: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
+                                        config: Some(vec![Config {
+                                            name: format!("out_internal_for_{}-config", step.name),
+                                            properties: {
+                                                let mut props = BTreeMap::new();
+                                                props.insert(
+                                                    "subscriptions".to_string(),
+                                                    serde_yaml::Value::String(
+                                                        next_topic.clone(),
+                                                    ),
+                                                );
+                                                props
+                                            },
+                                        }]),
                                     },
                                     namespace: "wasmcloud".to_string(),
                                     package: "messaging".to_string(),
@@ -429,6 +446,19 @@ pub fn convert_pipeline(
                                     name: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
+                                        config: Some(vec![Config {
+                                            name: format!("out_internal_for_{}-config", step.name),
+                                            properties: {
+                                                let mut props = BTreeMap::new();
+                                                props.insert(
+                                                    "subscriptions".to_string(),
+                                                    serde_yaml::Value::String(
+                                                        next_topics[0].clone(),
+                                                    ),
+                                                );
+                                                props
+                                            },
+                                        }]),
                                     },
                                     namespace: "wasmcloud".to_string(),
                                     package: "messaging".to_string(),
@@ -462,6 +492,19 @@ pub fn convert_pipeline(
                                 name: None,
                                 target: LinkTarget::Name {
                                     name: "messaging-nats".to_string(),
+                                    config: Some(vec![Config {
+                                        name: format!("out_internal_for_{}-config", step.name),
+                                        properties: {
+                                            let mut props = BTreeMap::new();
+                                            props.insert(
+                                                "subscriptions".to_string(),
+                                                serde_yaml::Value::String(
+                                                    step_topics.get(&step.name).unwrap().to_string().clone(), // TODO: Yeah... don't use unwrap()
+                                                ),
+                                            );
+                                            props
+                                        },
+                                    }]),
                                 },
                                 namespace: "wasmcloud".to_string(),
                                 package: "messaging".to_string(),
@@ -550,6 +593,7 @@ pub fn convert_pipeline(
                         name: Some(format!("{}-link", http_step.name)),
                         target: LinkTarget::Name {
                             name: http_step.name.clone(),
+                            config: None,
                         },
                         namespace: "wasi".to_string(),
                         package: "http".to_string(),
@@ -595,6 +639,7 @@ pub fn convert_pipeline(
                         name: Some((link_counter as char).to_string()),
                         target: LinkTarget::Name {
                             name: format!("in_internal_for_{}", step.name),
+                            config: None,
                         },
                         namespace: "wasmcloud".to_string(),
                         package: "messaging".to_string(),
@@ -629,6 +674,19 @@ pub fn convert_pipeline(
                         name: Some((link_counter as char).to_string()),
                         target: LinkTarget::Name {
                             name: format!("in_internal_for_{}", step.name),
+                            config: Some(vec![Config {
+                                name: format!("out_internal_for_{}-config", step.name),
+                                properties: {
+                                    let mut props = BTreeMap::new();
+                                    props.insert(
+                                        "subscriptions".to_string(),
+                                        serde_yaml::Value::String(
+                                            topic.clone(),
+                                        ),
+                                    );
+                                    props
+                                },
+                            }]),
                         },
                         namespace: "wasmcloud".to_string(),
                         package: "messaging".to_string(),
