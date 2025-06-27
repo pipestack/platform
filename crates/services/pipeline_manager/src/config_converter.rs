@@ -330,7 +330,7 @@ pub fn convert_pipeline(
                     component_type: "component".to_string(),
                     properties: Properties {
                         image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
-                        config: vec![]
+                        config: vec![],
                     },
                     traits: vec![
                         Trait {
@@ -562,8 +562,8 @@ pub fn convert_pipeline(
                                     props.insert(
                                         "path".to_string(),
                                         serde_yaml::Value::String(format!(
-                                            "/{}-{}-{}",
-                                            workspace_slug, pipeline.name, pipeline.version
+                                            "/{}-{}",
+                                            workspace_slug, pipeline.name
                                         )),
                                     );
                                     props
