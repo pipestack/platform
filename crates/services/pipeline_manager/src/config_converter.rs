@@ -8,6 +8,10 @@ const REGISTRY_URL: &'static str = match std::option_env!("REGISTRY_URL") {
     Some(url) => url,
     None => "localhost:5000",
 };
+const NATS_CLUSTER_URIS: &'static str = match std::option_env!("NATS_CLUSTER_URIS") {
+    Some(uris) => uris,
+    None => "localhost:4222",
+};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
@@ -634,7 +638,7 @@ pub fn convert_pipeline(
                                     props.insert(
                                         "cluster_uris".to_string(),
                                         serde_yaml::Value::String(
-                                            "nats://nats.railway.internal:4222".to_string(),
+                                            NATS_CLUSTER_URIS.to_string(),
                                         ),
                                     );
                                     props
@@ -678,7 +682,7 @@ pub fn convert_pipeline(
                                     props.insert(
                                         "cluster_uris".to_string(),
                                         serde_yaml::Value::String(
-                                            "nats://nats.railway.internal:4222".to_string(),
+                                            NATS_CLUSTER_URIS.to_string(),
                                         ),
                                     );
                                     props
@@ -710,7 +714,7 @@ pub fn convert_pipeline(
                     let mut props = BTreeMap::new();
                     props.insert(
                         "cluster_uris".to_string(),
-                        serde_yaml::Value::String("nats://nats.railway.internal:4222".to_string()),
+                        serde_yaml::Value::String(NATS_CLUSTER_URIS.to_string()),
                     );
                     props
                 },

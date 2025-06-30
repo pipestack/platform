@@ -12,6 +12,11 @@ mod config_converter;
 
 use crate::config_converter::Pipeline;
 
+const NATS_CLUSTER_URIS: &'static str = match std::option_env!("NATS_CLUSTER_URIS") {
+    Some(uris) => uris,
+    None => "localhost:4222",
+};
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
@@ -85,7 +90,7 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
             creds_path: None,
             jwt: None,
             seed: None,
-            url: std::option_env!("NATS_URL").map(String::from),
+            url: Some(NATS_CLUSTER_URIS.to_string()),
         },
     )
     .await
