@@ -50,8 +50,8 @@ wash-deploy-example example: (wash-run-all "build")
     just --justfile "$found_dir/justfile" --working-directory "$found_dir" pipeline-deploy
 
 
-wash-up:
-    wash up --allowed-insecure localhost:5000 -d
+wash-up lattice="default":
+    wash up --allowed-insecure localhost:5000 --lattice {{lattice}} -d
 
 wash-down:
     wash down --purge-jetstream all

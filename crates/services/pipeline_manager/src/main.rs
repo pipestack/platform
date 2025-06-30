@@ -81,9 +81,8 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
 
     tracing::info!("WADM yaml generated successfully: {wadm_yaml}");
 
-    // TODO: Deploy wadm file
-    let client = wadm_client::Client::new(
-        "default",
+    let client = match wadm_client::Client::new(
+        &payload.workspace_slug,
         None,
         wadm_client::ClientConnectOptions {
             ca_path: None,
@@ -94,16 +93,19 @@ async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployR
         },
     )
     .await
-    .unwrap();
+    {
+        Ok(client) => client,
+        Err(e) => {
+            tracing::error!("Failed to create WADM client: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DeployResponse {
+                    result: format!("Error creating WADM client: {}", e),
+                }),
+            );
+        }
+    };
 
-    // TODO: Only undeploy and delete the manifest in DEV, not PROD
-    // tracing::info!("Undeploying manifest: {}", &wadm_config.metadata.name);
-    // let _ = client.undeploy_manifest(&wadm_config.metadata.name).await;
-    // tracing::info!("Deleting manifest: {}", &wadm_config.metadata.name);
-    // client
-    //     .delete_manifest(&wadm_config.metadata.name, None)
-    //     .await
-    //     .unwrap();
     tracing::info!(
         "Putting and deploying manifest: {}",
         &wadm_config.metadata.name
