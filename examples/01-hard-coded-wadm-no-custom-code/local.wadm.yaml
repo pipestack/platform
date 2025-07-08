@@ -10,7 +10,7 @@ spec:
     - name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-in-http
       type: component
       properties:
-        image: file://../../../platform/main/crates/nodes/in-http/build/in_http_s.wasm
+        image: file://../../crates/nodes/in-http/build/in_http_s.wasm
         # image: localhost:5000/pipestack/in-http:0.0.1
         config:
           - name: custom-config
@@ -31,7 +31,7 @@ spec:
     - name: test-pipeline-01-hard-coded-wadm-no-custom-code-component-out-log
       type: component
       properties:
-        image: file://../../../platform/main/crates/nodes/out-log/build/out_log_s.wasm
+        image: file://../../crates/nodes/out-log/build/out_log_s.wasm
         # image: localhost:5000/pipestack/out-log:0.0.1
       traits:
         - type: spreadscaler

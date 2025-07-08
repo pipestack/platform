@@ -4,8 +4,9 @@ log_location: /tmp/pc.global.log
 processes:
   dev_services_pipeline_manager:
       namespace: dev
+      working_dir: crates/services/pipeline_manager
       command: |
-        cargo watch -w crates/services/pipeline_manager -x "run --bin pipeline_manager"
+        cargo watch -w . -x "run"
       environment:
         - "RUST_LOG=debug"
       is_tty: true

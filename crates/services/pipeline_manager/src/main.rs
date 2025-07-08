@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 use axum::{
     Json, Router,
+    extract::State,
     http::StatusCode,
     routing::{get, post},
 };
@@ -9,21 +10,29 @@ use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 
 mod config_converter;
+mod registry;
+mod settings;
+mod wadm;
 
 use crate::config_converter::Pipeline;
+use settings::Settings;
 
-const NATS_CLUSTER_URIS: &'static str = match std::option_env!("NATS_CLUSTER_URIS") {
-    Some(uris) => uris,
-    None => "localhost:4222",
-};
+#[derive(Clone)]
+struct AppState {
+    settings: Settings,
+}
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
+    let settings = Settings::new().expect("Could not read config settings");
+    let state = AppState { settings };
+
     let app = Router::new()
         .route("/deploy", post(deploy))
-        .route("/health", get(health));
+        .route("/health", get(health))
+        .with_state(state);
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or("3000".into())
@@ -45,82 +54,23 @@ async fn health() -> (StatusCode, Json<serde_json::Value>) {
     )
 }
 
-async fn deploy(Json(payload): Json<DeployRequest>) -> (StatusCode, Json<DeployResponse>) {
+async fn deploy(
+    State(app_state): State<AppState>,
+    Json(payload): Json<DeployRequest>,
+) -> (StatusCode, Json<DeployResponse>) {
     tracing::info!("Received deploy request: {:?}", payload);
 
-    // Convert payload to a valid wadm file
-    let wadm_config = match config_converter::convert_pipeline(&payload.pipeline, &payload.workspace_slug) {
-        Ok(config) => {
-            tracing::info!("Successfully converted pipeline to WADM config");
-            config
-        }
-        Err(e) => {
-            tracing::error!("Failed to convert pipeline: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DeployResponse {
-                    result: format!("Error converting pipeline: {}", e),
-                }),
-            );
-        }
-    };
+    if let Err(e) = crate::registry::publish_wasm_components(&payload, &app_state.settings).await {
+        tracing::error!("Failed to publish WASM components: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(DeployResponse {
+                result: format!("Failed to publish WASM components: {}", e),
+            }),
+        );
+    }
 
-    // Convert to YAML string
-    let wadm_yaml = match serde_yaml::to_string(&wadm_config) {
-        Ok(yaml) => yaml,
-        Err(e) => {
-            tracing::error!("Failed to serialize WADM config to YAML: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DeployResponse {
-                    result: format!("Error serializing WADM config: {}", e),
-                }),
-            );
-        }
-    };
-
-    tracing::info!("WADM yaml generated successfully: {wadm_yaml}");
-
-    let client = match wadm_client::Client::new(
-        &payload.workspace_slug,
-        None,
-        wadm_client::ClientConnectOptions {
-            ca_path: None,
-            creds_path: None,
-            jwt: None,
-            seed: None,
-            url: Some(NATS_CLUSTER_URIS.to_string()),
-        },
-    )
-    .await
-    {
-        Ok(client) => client,
-        Err(e) => {
-            tracing::error!("Failed to create WADM client: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DeployResponse {
-                    result: format!("Error creating WADM client: {}", e),
-                }),
-            );
-        }
-    };
-
-    tracing::info!(
-        "Putting and deploying manifest: {}",
-        &wadm_config.metadata.name
-    );
-    client
-        .put_and_deploy_manifest(wadm_yaml.as_bytes())
-        .await
-        .unwrap();
-
-    (
-        StatusCode::OK,
-        Json(DeployResponse {
-            result: format!("Pipeline deployed successfully"),
-        }),
-    )
+    crate::wadm::deploy_to_wasm_cloud(&payload, &app_state.settings).await
 }
 
 #[derive(Debug, Deserialize, Serialize)]

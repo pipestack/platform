@@ -3,15 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use ts_rs::TS;
 
+use crate::settings::Settings;
+
 const PIPELINE_TS_FILE_PATH: &str = "./pipeline.ts";
-const REGISTRY_URL: &'static str = match std::option_env!("REGISTRY_URL") {
-    Some(url) => url,
-    None => "localhost:5000",
-};
-const NATS_CLUSTER_URIS: &'static str = match std::option_env!("NATS_CLUSTER_URIS") {
-    Some(uris) => uris,
-    None => "localhost:4222",
-};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
@@ -34,8 +28,6 @@ pub struct PipelineNode {
     pub name: String,
     #[serde(rename = "type")]
     pub step_type: PipelineNodeType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instances: Option<u32>,
     pub position: XYPosition,
@@ -208,6 +200,7 @@ pub struct LinkSource {
 pub fn convert_pipeline(
     pipeline: &Pipeline,
     workspace_slug: &String,
+    settings: &Settings,
 ) -> Result<WadmApplication, Box<dyn std::error::Error>> {
     let mut components = Vec::new();
     let mut step_topics = HashMap::new();
@@ -271,7 +264,7 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/in-http:0.0.1", REGISTRY_URL),
+                        image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![
@@ -316,7 +309,7 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
+                            image: format!("{}/pipestack/out-internal:0.0.1", settings.registry.url),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -358,7 +351,7 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
+                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![
@@ -395,17 +388,18 @@ pub fn convert_pipeline(
                 });
 
                 // Add the processor component itself
-                let image = if let Some(source) = &step.source {
-                    source.clone()
-                } else {
-                    format!("{}/pipestack/{}:0.0.1", REGISTRY_URL, step.name)
-                };
-
                 components.push(Component {
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image,
+                        image: format!(
+                            "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
+                            settings.registry.url,
+                            workspace_slug,
+                            pipeline.name,
+                            pipeline.version,
+                            step.name
+                        ),
                         config: vec![],
                     },
                     traits: vec![Trait {
@@ -434,7 +428,7 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: format!("{}/pipestack/out-internal:0.0.1", REGISTRY_URL),
+                            image: format!("{}/pipestack/out-internal:0.0.1", settings.registry.url),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -476,7 +470,7 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/in-internal:0.0.1", REGISTRY_URL),
+                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![
@@ -517,7 +511,7 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/out-log:0.0.1", REGISTRY_URL),
+                        image: format!("{}/pipestack/out-log:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![Trait {
@@ -637,9 +631,7 @@ pub fn convert_pipeline(
                                     );
                                     props.insert(
                                         "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(
-                                            NATS_CLUSTER_URIS.to_string(),
-                                        ),
+                                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
                                     );
                                     props
                                 },
@@ -681,9 +673,7 @@ pub fn convert_pipeline(
                                     );
                                     props.insert(
                                         "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(
-                                            NATS_CLUSTER_URIS.to_string(),
-                                        ),
+                                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
                                     );
                                     props
                                 },
@@ -714,7 +704,7 @@ pub fn convert_pipeline(
                     let mut props = BTreeMap::new();
                     props.insert(
                         "cluster_uris".to_string(),
-                        serde_yaml::Value::String(NATS_CLUSTER_URIS.to_string()),
+                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
                     );
                     props
                 },
@@ -755,7 +745,6 @@ nodes:
       y: 100.0
   - name: processor_wasm_2_1750048126167
     type: processor-wasm
-    source: file:///path/to/data-processor.wasm
     instances: 1
     position:
       x: 200.0
@@ -840,7 +829,7 @@ spec:
   - name: processor_wasm_2_1750048126167
     type: component
     properties:
-      image: file:///path/to/data-processor.wasm
+      image: localhost:5000/test-workspace/pipeline/untitled-pipeline/builder/components/nodes/processor/wasm/processor_wasm_2_1750048126167.wasm:1.0.0
     traits:
     - type: spreadscaler
       properties:
@@ -930,7 +919,7 @@ spec:
       config:
       - name: messaging-nats-config
         properties:
-          cluster_uris: nats://nats.railway.internal:4222
+          cluster_uris: localhost:4222
     traits:
     - type: spreadscaler
       properties:
@@ -943,7 +932,7 @@ spec:
           config:
           - name: subscription-1-config
             properties:
-              cluster_uris: nats://nats.railway.internal:4222
+              cluster_uris: localhost:4222
               subscriptions: test-workspace-untitled-pipeline-step-2-in
         target:
           name: in-internal-for-processor_wasm_2_1750048126167
@@ -959,7 +948,7 @@ spec:
           config:
           - name: subscription-2-config
             properties:
-              cluster_uris: nats://nats.railway.internal:4222
+              cluster_uris: localhost:4222
               subscriptions: test-workspace-untitled-pipeline-step-3-in
         target:
           name: in-internal-for-out-log_log_3_1750048128320
@@ -968,12 +957,13 @@ spec:
         interfaces:
         - handler"#;
 
+        let settings = Settings::new().expect("Could not read config settings");
         // Parse the input YAML into a Pipeline struct
         let pipeline: Pipeline =
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
         // Convert the pipeline to WadmApplication
-        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"))
+        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"), &settings)
             .expect("Failed to convert pipeline");
 
         // Convert back to YAML
@@ -997,7 +987,6 @@ nodes:
       y: 100.0
   - name: processor_wasm_2_1750048126167
     type: processor-wasm
-    source: file:///path/to/data-processor.wasm
     instances: 1
     position:
       x: 200.0
@@ -1089,7 +1078,7 @@ spec:
   - name: processor_wasm_2_1750048126167
     type: component
     properties:
-      image: file:///path/to/data-processor.wasm
+      image: localhost:5000/test-workspace/pipeline/untitled-pipeline/builder/components/nodes/processor/wasm/processor_wasm_2_1750048126167.wasm:1.0.0
     traits:
     - type: spreadscaler
       properties:
@@ -1210,7 +1199,7 @@ spec:
       config:
       - name: messaging-nats-config
         properties:
-          cluster_uris: nats://nats.railway.internal:4222
+          cluster_uris: localhost:4222
     traits:
     - type: spreadscaler
       properties:
@@ -1223,7 +1212,7 @@ spec:
           config:
           - name: subscription-1-config
             properties:
-              cluster_uris: nats://nats.railway.internal:4222
+              cluster_uris: localhost:4222
               subscriptions: test-workspace-untitled-pipeline-step-2-in
         target:
           name: in-internal-for-processor_wasm_2_1750048126167
@@ -1239,7 +1228,7 @@ spec:
           config:
           - name: subscription-2-config
             properties:
-              cluster_uris: nats://nats.railway.internal:4222
+              cluster_uris: localhost:4222
               subscriptions: test-workspace-untitled-pipeline-step-3-in
         target:
           name: in-internal-for-out-log_log_3_1750048128320
@@ -1255,7 +1244,7 @@ spec:
           config:
           - name: subscription-3-config
             properties:
-              cluster_uris: nats://nats.railway.internal:4222
+              cluster_uris: localhost:4222
               subscriptions: test-workspace-untitled-pipeline-step-3-in
         target:
           name: in-internal-for-out-log_log_4_1750048128320
@@ -1264,17 +1253,92 @@ spec:
         interfaces:
         - handler"#;
 
+        let settings = Settings::new().expect("Could not read config settings");
         // Parse the input YAML into a Pipeline struct
         let pipeline: Pipeline =
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
         // Convert the pipeline to WadmApplication
-        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"))
+        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"), &settings)
             .expect("Failed to convert pipeline");
 
         // Convert back to YAML
         let output_yaml =
             serde_yaml::to_string(&wadm_app).expect("Failed to serialize WadmApplication to YAML");
+
+        // Compare with expected output
+        assert_eq!(output_yaml.trim(), expected_yaml.trim());
+    }
+
+    #[test]
+    fn test_convert_pipeline_with_default_wasm_image() {
+        let input_yaml = r#"
+name: test-pipeline
+version: 2.0.0
+nodes:
+  - name: processor_wasm_1
+    type: processor-wasm
+    instances: 1
+    position:
+      x: 100.0
+      y: 100.0
+"#;
+
+        let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: test-workspace-test-pipeline
+  annotations:
+    version: 2.0.0
+spec:
+  components:
+  - name: in-internal-for-processor_wasm_1
+    type: component
+    properties:
+      image: localhost:5000/pipestack/in-internal:0.0.1
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+    - type: link
+      properties:
+        target: processor_wasm_1
+        namespace: pipestack
+        package: customer
+        interfaces:
+        - customer
+    - type: link
+      properties:
+        target: out-internal-for-processor_wasm_1
+        namespace: pipestack
+        package: out
+        interfaces:
+        - out
+  - name: processor_wasm_1
+    type: component
+    properties:
+      image: localhost:5000/test-workspace/pipeline/test-pipeline/builder/components/nodes/processor/wasm/processor_wasm_1.wasm:2.0.0
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1
+  - name: messaging-nats
+    type: capability
+    properties:
+      image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      config:
+      - name: messaging-nats-config
+        properties:
+          cluster_uris: localhost:4222
+    traits:
+    - type: spreadscaler
+      properties:
+        instances: 1"#;
+
+        let settings = Settings::new().expect("Could not read config settings");
+        let pipeline: Pipeline = serde_yaml::from_str(input_yaml).unwrap();
+        let result = convert_pipeline(&pipeline, &"test-workspace".to_string(), &settings).unwrap();
+        let output_yaml = serde_yaml::to_string(&result).unwrap();
 
         // Compare with expected output
         assert_eq!(output_yaml.trim(), expected_yaml.trim());

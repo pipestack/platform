@@ -54,7 +54,7 @@ wash-up lattice="default":
     wash up --allowed-insecure localhost:5000 --lattice {{lattice}} -d
 
 wash-down:
-    wash down --purge-jetstream all
+    wash down --purge-jetstream all --all
 
 wash-logs:
     tail -f ~/.wash/downloads/wasmcloud.log
