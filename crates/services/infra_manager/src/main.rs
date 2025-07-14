@@ -342,6 +342,9 @@ impl InfraManager {
                 // Update the service instance configuration
                 self.update_service_instance(&service.id).await?;
 
+                // Create a domain for the service
+                self.create_service_domain(&service.id).await?;
+
                 // Redeploy the service instance
                 self.redeploy_service_instance(&service.id).await?;
             } else {
@@ -379,6 +382,31 @@ impl InfraManager {
 
         info!(
             "Successfully updated Railway service instance: {}",
+            service_id
+        );
+        Ok(())
+    }
+
+    async fn create_service_domain(&self, service_id: &str) -> Result<()> {
+        let mutation = r#"
+            mutation serviceDomainCreate($environmentId: String!, $serviceId: String!, $targetPort: Int!) {
+                serviceDomainCreate(environmentId: $environmentId, serviceId: $serviceId, targetPort: $targetPort)
+            }
+        "#;
+
+        let variables = json!({
+            "environmentId": self.config.railway.environment_id,
+            "serviceId": service_id,
+            "targetPort": 8000
+        });
+
+        info!("Creating domain for Railway service: {}", service_id);
+
+        self.make_railway_graphql_request(mutation, variables, "service domain create")
+            .await?;
+
+        info!(
+            "Successfully created domain for Railway service: {}",
             service_id
         );
         Ok(())
