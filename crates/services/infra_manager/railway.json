@@ -4,6 +4,7 @@
     "buildCommand": "cargo build --release --package infra_manager"
   },
   "deploy": {
+    "startCommand": "./target/release/infra_manager",
     "numReplicas": 1,
     "region": "us-east4-eqdc4a",
     "restartPolicyMaxRetries": 10,
