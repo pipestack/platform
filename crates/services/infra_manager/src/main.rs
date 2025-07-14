@@ -300,7 +300,7 @@ impl InfraManager {
             }
         });
 
-        info!("Creating Railway service: {}", service_name);
+        info!("Creating Railway service: {}. GraphQL query variables: {:?}", service_name, variables);
 
         let response_text = self
             .make_railway_graphql_request(mutation, variables, "service creation")
