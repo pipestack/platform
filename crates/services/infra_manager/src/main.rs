@@ -309,13 +309,31 @@ impl InfraManager {
         "#;
 
         let mut env_variables = std::collections::HashMap::new();
-        env_variables.insert("RUST_LOG".to_string(), "debug,hyper=info,async_nats=info,oci_client=info,cranelift_codegen=warn".to_string());
-        env_variables.insert("WASMCLOUD_CTL_HOST".to_string(), "${{nats.RAILWAY_PRIVATE_DOMAIN}}".to_string());
+        env_variables.insert(
+            "RUST_LOG".to_string(),
+            "debug,hyper=info,async_nats=info,oci_client=info,cranelift_codegen=warn".to_string(),
+        );
+        env_variables.insert(
+            "WASMCLOUD_CTL_HOST".to_string(),
+            "${{nats.RAILWAY_PRIVATE_DOMAIN}}".to_string(),
+        );
         env_variables.insert("WASMCLOUD_LOG_LEVEL".to_string(), "debug".to_string());
-        env_variables.insert("WASMCLOUD_OCI_ALLOWED_INSECURE".to_string(), "${{registry.RAILWAY_PRIVATE_DOMAIN}}:5000".to_string());
-        env_variables.insert("WASMCLOUD_RPC_HOST".to_string(), "${{nats.RAILWAY_PRIVATE_DOMAIN}}".to_string());
-        env_variables.insert("WASMCLOUD_OBSERVABILITY_ENABLED".to_string(), "true".to_string());
-        env_variables.insert("OTEL_EXPORTER_OTLP_ENDPOINT".to_string(), "http://${{otelcol.RAILWAY_PRIVATE_DOMAIN}}:4318".to_string());
+        env_variables.insert(
+            "WASMCLOUD_OCI_ALLOWED_INSECURE".to_string(),
+            "${{registry.RAILWAY_PRIVATE_DOMAIN}}:5000".to_string(),
+        );
+        env_variables.insert(
+            "WASMCLOUD_RPC_HOST".to_string(),
+            "${{nats.RAILWAY_PRIVATE_DOMAIN}}".to_string(),
+        );
+        env_variables.insert(
+            "WASMCLOUD_OBSERVABILITY_ENABLED".to_string(),
+            "true".to_string(),
+        );
+        env_variables.insert(
+            "OTEL_EXPORTER_OTLP_ENDPOINT".to_string(),
+            "http://${{otelcol.RAILWAY_PRIVATE_DOMAIN}}:4318".to_string(),
+        );
         env_variables.insert("WASMCLOUD_LATTICE".to_string(), workspace.slug.clone());
 
         let variables = json!({
@@ -360,7 +378,8 @@ impl InfraManager {
                 self.update_service_instance(&service.id).await?;
 
                 // Create a domain for the service
-                self.create_service_domain(&service.id, &workspace.slug).await?;
+                self.create_service_domain(&service.id, &workspace.slug)
+                    .await?;
 
                 // Redeploy the service instance
                 self.redeploy_service_instance(&service.id).await?;
@@ -376,7 +395,7 @@ impl InfraManager {
 
     async fn update_service_instance(&self, service_id: &str) -> Result<()> {
         let mutation = r#"
-            mutation serviceInstanceUpdate($serviceId: String!, $environmentId: String, $input: ServiceInstanceUpdateInput!) {
+            mutation ServiceInstanceUpdate($serviceId: String!, $environmentId: String, $input: ServiceInstanceUpdateInput!) {
                 serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input)
             }
         "#;
@@ -406,17 +425,19 @@ impl InfraManager {
 
     async fn create_service_domain(&self, service_id: &str, workspace_slug: &str) -> Result<()> {
         let mutation = r#"
-            mutation serviceDomainCreate($environmentId: String!, $serviceId: String!, $targetPort: Int!) {
-                serviceDomainCreate(environmentId: $environmentId, serviceId: $serviceId, targetPort: $targetPort) {
+            mutation ServiceDomainCreate($input: ServiceDomainCreateInput!) {
+                serviceDomainCreate(input: $input) {
                     id
                 }
             }
         "#;
 
         let variables = json!({
-            "environmentId": self.config.railway.environment_id,
-            "serviceId": service_id,
-            "targetPort": 8000
+            "input": {
+                "environmentId": self.config.railway.environment_id,
+                "serviceId": service_id,
+                "targetPort": 8000
+            }
         });
 
         info!("Creating domain for Railway service: {}", service_id);
@@ -431,7 +452,9 @@ impl InfraManager {
             for error in errors {
                 error!("Railway domain creation error: {}", error.message);
             }
-            return Err(anyhow::anyhow!("Railway domain creation API returned errors"));
+            return Err(anyhow::anyhow!(
+                "Railway domain creation API returned errors"
+            ));
         }
 
         if let Some(data) = domain_response.data {
@@ -442,35 +465,50 @@ impl InfraManager {
                 );
 
                 // Update the domain with a better name
-                self.update_service_domain(&domain.id, service_id, workspace_slug).await?;
+                self.update_service_domain(&domain.id, service_id, workspace_slug)
+                    .await?;
             } else {
-                return Err(anyhow::anyhow!("Domain creation succeeded but no domain data returned"));
+                return Err(anyhow::anyhow!(
+                    "Domain creation succeeded but no domain data returned"
+                ));
             }
         } else {
-            return Err(anyhow::anyhow!("Domain creation response contained no data"));
+            return Err(anyhow::anyhow!(
+                "Domain creation response contained no data"
+            ));
         }
 
         Ok(())
     }
 
-    async fn update_service_domain(&self, domain_id: &str, service_id: &str, workspace_slug: &str) -> Result<()> {
+    async fn update_service_domain(
+        &self,
+        domain_id: &str,
+        service_id: &str,
+        workspace_slug: &str,
+    ) -> Result<()> {
         let domain_name = format!("pipestack-{}", workspace_slug);
-        
+
         let mutation = r#"
-            mutation serviceDomainUpdate($domain: String!, $environmentId: String!, $serviceDomainId: String!, $serviceId: String!, $targetPort: Int!) {
-                serviceDomainUpdate(domain: $domain, environmentId: $environmentId, serviceDomainId: $serviceDomainId, serviceId: $serviceId, targetPort: $targetPort)
+            mutation serviceDomainUpdate($input: ServiceDomainUpdateInput!) {
+                serviceDomainUpdate(input: $input)
             }
         "#;
 
         let variables = json!({
-            "domain": domain_name,
-            "environmentId": self.config.railway.environment_id,
-            "serviceDomainId": domain_id,
-            "serviceId": service_id,
-            "targetPort": 8000
+            "input": {
+                "domain": domain_name,
+                "environmentId": self.config.railway.environment_id,
+                "serviceDomainId": domain_id,
+                "serviceId": service_id,
+                "targetPort": 8000
+            }
         });
 
-        info!("Updating domain for Railway service: {} with domain name: {}", service_id, domain_name);
+        info!(
+            "Updating domain for Railway service: {} with domain name: {}",
+            service_id, domain_name
+        );
 
         self.make_railway_graphql_request(mutation, variables, "service domain update")
             .await?;
