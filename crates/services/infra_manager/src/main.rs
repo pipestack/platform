@@ -55,6 +55,7 @@ struct RailwayError {
 
 #[derive(Debug, Serialize)]
 struct ServiceInstanceUpdateInput {
+    builder: String,
     #[serde(rename = "railwayConfigFile")]
     railway_config_file: String,
     region: String,
@@ -364,6 +365,7 @@ impl InfraManager {
             "serviceId": service_id,
             "environmentId": self.config.railway.environment_id,
             "input": ServiceInstanceUpdateInput {
+                builder: "NIXPACKS".to_string(),
                 railway_config_file: "./services/wasmcloud/railway.json".to_string(),
                 region: "us-east4-eqdc4a".to_string(),
                 root_directory: "/services/wasmcloud".to_string(),
