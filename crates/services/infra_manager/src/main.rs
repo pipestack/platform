@@ -26,7 +26,6 @@ struct RailwayServiceInput {
 
 #[derive(Debug, Serialize)]
 struct RailwayServiceSource {
-    #[serde(rename = "type")]
     repo: String,
 }
 
