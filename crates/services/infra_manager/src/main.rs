@@ -145,16 +145,22 @@ impl InfraManager {
 
         sqlx::query(trigger_function).execute(&self.pool).await?;
 
-        // Create the trigger if it doesn't exist
-        let trigger_sql = r#"
+        // Drop the trigger if it exists
+        let drop_trigger_sql = r#"
             DROP TRIGGER IF EXISTS workspace_insert_trigger ON workspaces;
+        "#;
+
+        sqlx::query(drop_trigger_sql).execute(&self.pool).await?;
+
+        // Create the trigger
+        let create_trigger_sql = r#"
             CREATE TRIGGER workspace_insert_trigger
             AFTER INSERT ON workspaces
             FOR EACH ROW
             EXECUTE FUNCTION notify_workspace_created();
         "#;
 
-        sqlx::query(trigger_sql).execute(&self.pool).await?;
+        sqlx::query(create_trigger_sql).execute(&self.pool).await?;
 
         info!("Database trigger setup completed successfully");
         Ok(())
