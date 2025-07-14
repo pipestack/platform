@@ -22,6 +22,7 @@ struct RailwayServiceInput {
     #[serde(rename = "projectId")]
     project_id: String,
     source: RailwayServiceSource,
+    variables: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -289,6 +290,16 @@ impl InfraManager {
             }
         "#;
 
+        let mut env_variables = std::collections::HashMap::new();
+        env_variables.insert("RUST_LOG".to_string(), "debug,hyper=info,async_nats=info,oci_client=info,cranelift_codegen=warn".to_string());
+        env_variables.insert("WASMCLOUD_CTL_HOST".to_string(), "${{nats.RAILWAY_PRIVATE_DOMAIN}}".to_string());
+        env_variables.insert("WASMCLOUD_LOG_LEVEL".to_string(), "debug".to_string());
+        env_variables.insert("WASMCLOUD_OCI_ALLOWED_INSECURE".to_string(), "${{registry.RAILWAY_PRIVATE_DOMAIN}}:5000".to_string());
+        env_variables.insert("WASMCLOUD_RPC_HOST".to_string(), "${{nats.RAILWAY_PRIVATE_DOMAIN}}".to_string());
+        env_variables.insert("WASMCLOUD_OBSERVABILITY_ENABLED".to_string(), "true".to_string());
+        env_variables.insert("OTEL_EXPORTER_OTLP_ENDPOINT".to_string(), "http://${{otelcol.RAILWAY_PRIVATE_DOMAIN}}:4318".to_string());
+        env_variables.insert("WASMCLOUD_LATTICE".to_string(), workspace.slug.clone());
+
         let variables = json!({
             "input": RailwayServiceInput {
                 branch: self.config.railway.default_branch.clone(),
@@ -297,7 +308,8 @@ impl InfraManager {
                 project_id: self.config.railway.project_id.clone(),
                 source: RailwayServiceSource {
                     repo: self.config.railway.default_template_repo.clone(),
-                }
+                },
+                variables: env_variables,
             }
         });
 
