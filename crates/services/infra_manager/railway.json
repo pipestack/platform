@@ -1,0 +1,10 @@
+{
+	"$schema": "https://railway.app/railway.schema.json",
+	"deploy": {
+		"numReplicas": 1,
+		"region": "us-east4-eqdc4a",
+		"restartPolicyMaxRetries": 10,
+		"restartPolicyType": "ON_FAILURE",
+		"runtime": "V2"
+	}
+}
