@@ -60,7 +60,7 @@ impl Config {
             .unwrap_or_else(|_| "https://backboard.railway.app/graphql/v2".to_string());
 
         let default_template_repo = env::var("RAILWAY_DEFAULT_TEMPLATE_REPO")
-            .unwrap_or_else(|_| "https://github.com/pipestack/wasmcloud-infra".to_string());
+            .unwrap_or_else(|_| "pipestack/wasmcloud-infra".to_string());
 
         let default_branch = env::var("RAILWAY_DEFAULT_BRANCH")
             .unwrap_or_else(|_| "main".to_string());
