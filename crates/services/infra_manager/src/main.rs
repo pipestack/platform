@@ -7,12 +7,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{PgPool, postgres::PgListener};
 use tracing::{error, info, warn};
-use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
 struct WorkspaceNotification {
-    id: Uuid,
-    name: String,
+    slug: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -133,9 +131,7 @@ impl InfraManager {
             BEGIN
                 PERFORM pg_notify('workspace_created', 
                     json_build_object(
-                        'id', NEW.id,
-                        'name', NEW.name,
-                        'created_at', NEW.created_at
+                        'slug', NEW.slug
                     )::text
                 );
                 RETURN NEW;
@@ -242,7 +238,7 @@ impl InfraManager {
                                 success = true;
                                 info!(
                                     "Successfully created Railway service for workspace {} on attempt {}",
-                                    workspace.id,
+                                    workspace.slug,
                                     retry_count + 1
                                 );
                             }
@@ -250,7 +246,7 @@ impl InfraManager {
                                 retry_count += 1;
                                 error!(
                                     "Failed to create Railway service for workspace {} (attempt {}): {}",
-                                    workspace.id, retry_count, e
+                                    workspace.slug, retry_count, e
                                 );
 
                                 if retry_count < self.config.service.max_retries {
@@ -270,7 +266,7 @@ impl InfraManager {
                     if !success {
                         error!(
                             "Failed to create Railway service for workspace {} after {} attempts",
-                            workspace.id, self.config.service.max_retries
+                            workspace.slug, self.config.service.max_retries
                         );
                     }
                 }
@@ -282,18 +278,7 @@ impl InfraManager {
     }
 
     async fn create_railway_service(&self, workspace: &WorkspaceNotification) -> Result<()> {
-        let service_name = format!(
-            "{}-{}",
-            self.config.service.name_prefix,
-            workspace
-                .name
-                .to_lowercase()
-                .replace(" ", "-")
-                .replace("_", "-")
-                .chars()
-                .filter(|c| c.is_alphanumeric() || *c == '-')
-                .collect::<String>()
-        );
+        let service_name = format!("{}-{}", self.config.service.name_prefix, &workspace.slug);
 
         let mutation = r#"
             mutation ServiceCreate($input: ServiceCreateInput!) {
