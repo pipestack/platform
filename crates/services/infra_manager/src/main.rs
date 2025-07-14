@@ -15,6 +15,7 @@ struct WorkspaceNotification {
 
 #[derive(Debug, Serialize)]
 struct RailwayServiceInput {
+    branch: String,
     #[serde(rename = "environmentId")]
     environment_id: String,
     name: String,
@@ -291,6 +292,7 @@ impl InfraManager {
 
         let variables = json!({
             "input": RailwayServiceInput {
+                branch: self.config.railway.default_branch.clone(),
                 environment_id: self.config.railway.environment_id.clone(),
                 name: service_name.clone(),
                 project_id: self.config.railway.project_id.clone(),
@@ -300,7 +302,10 @@ impl InfraManager {
             }
         });
 
-        info!("Creating Railway service: {}. GraphQL query variables: {:?}", service_name, variables);
+        info!(
+            "Creating Railway service: {}. GraphQL query variables: {:?}",
+            service_name, variables
+        );
 
         let response_text = self
             .make_railway_graphql_request(mutation, variables, "service creation")
