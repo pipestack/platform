@@ -53,6 +53,23 @@ struct RailwayError {
     message: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct RailwayDomainCreateResponse {
+    data: Option<RailwayDomainCreateData>,
+    errors: Option<Vec<RailwayError>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RailwayDomainCreateData {
+    #[serde(rename = "serviceDomainCreate")]
+    service_domain_create: Option<RailwayDomain>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RailwayDomain {
+    id: String,
+}
+
 #[derive(Debug, Serialize)]
 struct ServiceInstanceUpdateInput {
     builder: String,
@@ -343,7 +360,7 @@ impl InfraManager {
                 self.update_service_instance(&service.id).await?;
 
                 // Create a domain for the service
-                self.create_service_domain(&service.id).await?;
+                self.create_service_domain(&service.id, &workspace.slug).await?;
 
                 // Redeploy the service instance
                 self.redeploy_service_instance(&service.id).await?;
@@ -387,10 +404,12 @@ impl InfraManager {
         Ok(())
     }
 
-    async fn create_service_domain(&self, service_id: &str) -> Result<()> {
+    async fn create_service_domain(&self, service_id: &str, workspace_slug: &str) -> Result<()> {
         let mutation = r#"
             mutation serviceDomainCreate($environmentId: String!, $serviceId: String!, $targetPort: Int!) {
-                serviceDomainCreate(environmentId: $environmentId, serviceId: $serviceId, targetPort: $targetPort)
+                serviceDomainCreate(environmentId: $environmentId, serviceId: $serviceId, targetPort: $targetPort) {
+                    id
+                }
             }
         "#;
 
@@ -402,12 +421,63 @@ impl InfraManager {
 
         info!("Creating domain for Railway service: {}", service_id);
 
-        self.make_railway_graphql_request(mutation, variables, "service domain create")
+        let response_text = self
+            .make_railway_graphql_request(mutation, variables, "service domain create")
+            .await?;
+
+        let domain_response: RailwayDomainCreateResponse = serde_json::from_str(&response_text)?;
+
+        if let Some(errors) = domain_response.errors {
+            for error in errors {
+                error!("Railway domain creation error: {}", error.message);
+            }
+            return Err(anyhow::anyhow!("Railway domain creation API returned errors"));
+        }
+
+        if let Some(data) = domain_response.data {
+            if let Some(domain) = data.service_domain_create {
+                info!(
+                    "Successfully created domain for Railway service: {} (Domain ID: {})",
+                    service_id, domain.id
+                );
+
+                // Update the domain with a better name
+                self.update_service_domain(&domain.id, service_id, workspace_slug).await?;
+            } else {
+                return Err(anyhow::anyhow!("Domain creation succeeded but no domain data returned"));
+            }
+        } else {
+            return Err(anyhow::anyhow!("Domain creation response contained no data"));
+        }
+
+        Ok(())
+    }
+
+    async fn update_service_domain(&self, domain_id: &str, service_id: &str, workspace_slug: &str) -> Result<()> {
+        let domain_name = format!("pipestack-{}", workspace_slug);
+        
+        let mutation = r#"
+            mutation serviceDomainUpdate($domain: String!, $environmentId: String!, $serviceDomainId: String!, $serviceId: String!, $targetPort: Int!) {
+                serviceDomainUpdate(domain: $domain, environmentId: $environmentId, serviceDomainId: $serviceDomainId, serviceId: $serviceId, targetPort: $targetPort)
+            }
+        "#;
+
+        let variables = json!({
+            "domain": domain_name,
+            "environmentId": self.config.railway.environment_id,
+            "serviceDomainId": domain_id,
+            "serviceId": service_id,
+            "targetPort": 8000
+        });
+
+        info!("Updating domain for Railway service: {} with domain name: {}", service_id, domain_name);
+
+        self.make_railway_graphql_request(mutation, variables, "service domain update")
             .await?;
 
         info!(
-            "Successfully created domain for Railway service: {}",
-            service_id
+            "Successfully updated domain for Railway service: {} to {}",
+            service_id, domain_name
         );
         Ok(())
     }
