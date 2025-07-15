@@ -174,7 +174,8 @@ pub enum TraitProperties {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LinkProperties {
-    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<LinkSource>,
     pub target: LinkTarget,
@@ -282,7 +283,7 @@ pub fn convert_pipeline(
                         Trait {
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
-                                name: format!("{}-to-out-internal-for-{}-link", step.name, step.name),
+                                name: None,
                                 source: None,
                                 target: LinkTarget::Name {
                                     name: format!("out-internal-for-{}", step.name),
@@ -338,10 +339,10 @@ pub fn convert_pipeline(
                             Trait {
                                 trait_type: "link".to_string(),
                                 properties: TraitProperties::Link(LinkProperties {
-                                    name: format!(
+                                    name: Some(format!(
                                         "out-internal-for-{}-to-messaging-nats-link",
                                         step.name
-                                    ),
+                                    )),
                                     source: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
@@ -373,7 +374,7 @@ pub fn convert_pipeline(
                         Trait {
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
-                                name: format!("in-internal-for-{}-to-customer-link", step.name),
+                                name: None,
                                 source: None,
                                 target: LinkTarget::String(step.name.clone()),
                                 namespace: "pipestack".to_string(),
@@ -384,10 +385,7 @@ pub fn convert_pipeline(
                         Trait {
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
-                                name: format!(
-                                    "in-internal-for-{}-to-out-internal-for-{}-link",
-                                    step.name, step.name
-                                ),
+                                name: None,
                                 source: None,
                                 target: LinkTarget::String(format!(
                                     "out-internal-for-{}",
@@ -466,10 +464,10 @@ pub fn convert_pipeline(
                             Trait {
                                 trait_type: "link".to_string(),
                                 properties: TraitProperties::Link(LinkProperties {
-                                    name: format!(
+                                    name: Some(format!(
                                         "out-internal-for-{}-to-messaging-nats-link",
                                         step.name
-                                    ),
+                                    )),
                                     source: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
@@ -501,10 +499,10 @@ pub fn convert_pipeline(
                         Trait {
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
-                                name: format!(
+                                name: Some(format!(
                                     "in-internal-for-{}-to-messaging-nats-link",
                                     step.name
-                                ),
+                                )),
                                 source: None,
                                 target: LinkTarget::Name {
                                     name: "messaging-nats".to_string(),
@@ -518,7 +516,7 @@ pub fn convert_pipeline(
                         Trait {
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
-                                name: format!("in-internal-for-{}-to-out-link", step.name),
+                                name: None,
                                 source: None,
                                 target: LinkTarget::String(step.name.clone()),
                                 namespace: "pipestack".to_string(),
@@ -576,7 +574,7 @@ pub fn convert_pipeline(
             traits: vec![Trait {
                 trait_type: "link".to_string(),
                 properties: TraitProperties::Link(LinkProperties {
-                    name: format!("httpserver-to-{}-link", http_step.name),
+                    name: Some(format!("httpserver-to-{}-link", http_step.name)),
                     source: Some(LinkSource {
                         name: None,
                         config: vec![Config {
@@ -614,7 +612,10 @@ pub fn convert_pipeline(
                 nats_traits.push(Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
-                        name: format!("messaging-nats-to-in-internal-for-{}-link", step.name),
+                        name: Some(format!(
+                            "messaging-nats-to-in-internal-for-{}-link",
+                            step.name
+                        )),
                         source: Some(LinkSource {
                             name: Some("messaging-nats".to_string()),
                             config: vec![Config {
@@ -655,7 +656,10 @@ pub fn convert_pipeline(
                 nats_traits.push(Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
-                        name: format!("messaging-nats-to-in-internal-for-{}-link", step.name),
+                        name: Some(format!(
+                            "messaging-nats-to-in-internal-for-{}-link",
+                            step.name
+                        )),
                         source: Some(LinkSource {
                             name: Some("messaging-nats".to_string()),
                             config: vec![Config {
