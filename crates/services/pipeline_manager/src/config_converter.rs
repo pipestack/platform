@@ -309,7 +309,10 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: format!("{}/pipestack/out-internal:0.0.1", settings.registry.url),
+                            image: format!(
+                                "{}/pipestack/out-internal:0.0.1",
+                                settings.registry.url
+                            ),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -428,7 +431,10 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: format!("{}/pipestack/out-internal:0.0.1", settings.registry.url),
+                            image: format!(
+                                "{}/pipestack/out-internal:0.0.1",
+                                settings.registry.url
+                            ),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -579,10 +585,7 @@ pub fn convert_pipeline(
                                     let mut props = BTreeMap::new();
                                     props.insert(
                                         "path".to_string(),
-                                        serde_yaml::Value::String(format!(
-                                            "/{}-{}",
-                                            workspace_slug, pipeline.name
-                                        )),
+                                        serde_yaml::Value::String(format!("/{}", pipeline.name)),
                                     );
                                     props
                                 },
@@ -631,7 +634,9 @@ pub fn convert_pipeline(
                                     );
                                     props.insert(
                                         "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
+                                        serde_yaml::Value::String(
+                                            settings.nats.cluster_uris.to_string(),
+                                        ),
                                     );
                                     props
                                 },
@@ -673,7 +678,9 @@ pub fn convert_pipeline(
                                     );
                                     props.insert(
                                         "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
+                                        serde_yaml::Value::String(
+                                            settings.nats.cluster_uris.to_string(),
+                                        ),
                                     );
                                     props
                                 },
