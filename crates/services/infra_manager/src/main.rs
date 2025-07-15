@@ -383,6 +383,13 @@ impl InfraManager {
 
                 // Redeploy the service instance
                 self.redeploy_service_instance(&service.id).await?;
+
+                // Wait 90 seconds for the service to fully deploy
+                info!("Waiting 90 seconds for service to fully deploy...");
+                tokio::time::sleep(tokio::time::Duration::from_secs(90)).await;
+
+                // Notify pipeline manager about the new deployment
+                self.notify_pipeline_manager(&workspace.slug).await?;
             } else {
                 warn!("Railway service creation succeeded but no service data returned");
             }
@@ -556,6 +563,50 @@ impl InfraManager {
             .await?;
 
         Ok(workspaces)
+    }
+
+    async fn notify_pipeline_manager(&self, workspace_slug: &str) -> Result<()> {
+        let url = "http://pipeline-manager.railway.internal:3000/deploy-providers";
+
+        let payload = json!({
+            "workspaceSlug": workspace_slug
+        });
+
+        info!(
+            "Notifying pipeline manager for workspace: {}",
+            workspace_slug
+        );
+
+        let response = self
+            .http_client
+            .post(url)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            info!(
+                "Successfully notified pipeline manager for workspace: {}",
+                workspace_slug
+            );
+        } else {
+            let status = response.status();
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            error!(
+                "Failed to notify pipeline manager. Status: {}, Error: {}",
+                status, error_text
+            );
+            return Err(anyhow::anyhow!(
+                "Pipeline manager notification failed with status: {}",
+                status
+            ));
+        }
+
+        Ok(())
     }
 }
 

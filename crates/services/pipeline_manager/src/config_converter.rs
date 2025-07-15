@@ -140,13 +140,10 @@ pub struct Component {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Properties {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub application: Option<ApplicationRef>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub config: Vec<Config>,
+#[serde(untagged)]
+pub enum Properties {
+    WithImage { image: String, config: Vec<Config> },
+    WithApplication { application: ApplicationRef },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -272,9 +269,8 @@ pub fn convert_pipeline(
                 components.push(Component {
                     name: step.name.clone(),
                     component_type: "component".to_string(),
-                    properties: Properties {
-                        image: Some(format!("{}/pipestack/in-http:0.0.1", settings.registry.url)),
-                        application: None,
+                    properties: Properties::WithImage {
+                        image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![
@@ -318,12 +314,11 @@ pub fn convert_pipeline(
                     components.push(Component {
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
-                        properties: Properties {
-                            image: Some(format!(
+                        properties: Properties::WithImage {
+                            image: format!(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
-                            )),
-                            application: None,
+                            ),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -364,9 +359,8 @@ pub fn convert_pipeline(
                 components.push(Component {
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
-                    properties: Properties {
-                        image: Some(format!("{}/pipestack/in-internal:0.0.1", settings.registry.url)),
-                        application: None,
+                    properties: Properties::WithImage {
+                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![
@@ -406,16 +400,15 @@ pub fn convert_pipeline(
                 components.push(Component {
                     name: step.name.clone(),
                     component_type: "component".to_string(),
-                    properties: Properties {
-                        image: Some(format!(
+                    properties: Properties::WithImage {
+                        image: format!(
                             "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
                             settings.registry.url,
                             workspace_slug,
                             pipeline.name,
                             pipeline.version,
                             step.name
-                        )),
-                        application: None,
+                        ),
                         config: vec![],
                     },
                     traits: vec![Trait {
@@ -443,12 +436,11 @@ pub fn convert_pipeline(
                     components.push(Component {
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
-                        properties: Properties {
-                            image: Some(format!(
+                        properties: Properties::WithImage {
+                            image: format!(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
-                            )),
-                            application: None,
+                            ),
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -489,9 +481,8 @@ pub fn convert_pipeline(
                 components.push(Component {
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
-                    properties: Properties {
-                        image: Some(format!("{}/pipestack/in-internal:0.0.1", settings.registry.url)),
-                        application: None,
+                    properties: Properties::WithImage {
+                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![
@@ -531,9 +522,8 @@ pub fn convert_pipeline(
                 components.push(Component {
                     name: step.name.clone(),
                     component_type: "component".to_string(),
-                    properties: Properties {
-                        image: Some(format!("{}/pipestack/out-log:0.0.1", settings.registry.url)),
-                        application: None,
+                    properties: Properties::WithImage {
+                        image: format!("{}/pipestack/out-log:0.0.1", settings.registry.url),
                         config: vec![],
                     },
                     traits: vec![Trait {
@@ -566,33 +556,13 @@ pub fn convert_pipeline(
         components.push(Component {
             name: "httpserver".to_string(),
             component_type: "capability".to_string(),
-            properties: Properties {
-                image: None,
-                application: Some(ApplicationRef {
+            properties: Properties::WithApplication {
+                application: ApplicationRef {
                     name: format!("{}-providers", workspace_slug),
                     component: "httpserver".to_string(),
-                }),
-                config: vec![Config {
-                    name: "default-http-config".to_string(),
-                    properties: {
-                        let mut props = BTreeMap::new();
-                        props.insert(
-                            "routing_mode".to_string(),
-                            serde_yaml::Value::String("path".to_string()),
-                        );
-                        props.insert(
-                            "address".to_string(),
-                            serde_yaml::Value::String("0.0.0.0:8000".to_string()),
-                        );
-                        props
-                    },
-                }],
+                },
             },
             traits: vec![
-                Trait {
-                    trait_type: "spreadscaler".to_string(),
-                    properties: TraitProperties::Spreadscaler { instances: 1 },
-                },
                 Trait {
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
@@ -625,10 +595,7 @@ pub fn convert_pipeline(
     }
 
     // NATS messaging capability
-    let mut nats_traits = vec![Trait {
-        trait_type: "spreadscaler".to_string(),
-        properties: TraitProperties::Spreadscaler { instances: 1 },
-    }];
+    let mut nats_traits = vec![];
 
     // Add messaging-nats links
     let mut subscription_counter = 1;
@@ -723,23 +690,11 @@ pub fn convert_pipeline(
     components.push(Component {
         name: "messaging-nats".to_string(),
         component_type: "capability".to_string(),
-        properties: Properties {
-            image: None,
-            application: Some(ApplicationRef {
+        properties: Properties::WithApplication {
+            application: ApplicationRef {
                 name: format!("{}-providers", workspace_slug),
                 component: "messaging-nats".to_string(),
-            }),
-            config: vec![Config {
-                name: "messaging-nats-config".to_string(),
-                properties: {
-                    let mut props = BTreeMap::new();
-                    props.insert(
-                        "cluster_uris".to_string(),
-                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
-                    );
-                    props
-                },
-            }],
+            },
         },
         traits: nats_traits,
     });
@@ -759,10 +714,16 @@ pub fn convert_pipeline(
     })
 }
 
-pub fn create_providers_wadm(workspace_slug: &str) -> WadmApplication {
+pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmApplication {
     let mut annotations = BTreeMap::new();
-    annotations.insert("experimental.wasmcloud.dev/shared".to_string(), "true".to_string());
-    annotations.insert("description".to_string(), format!("Shared providers for the {} workspace", workspace_slug));
+    annotations.insert(
+        "experimental.wasmcloud.dev/shared".to_string(),
+        "true".to_string(),
+    );
+    annotations.insert(
+        "description".to_string(),
+        format!("Shared providers for the {} workspace", workspace_slug),
+    );
     annotations.insert("version".to_string(), "v0.0.1".to_string());
 
     let metadata = Metadata {
@@ -772,17 +733,22 @@ pub fn create_providers_wadm(workspace_slug: &str) -> WadmApplication {
 
     // HTTP Server component
     let mut http_config_props = BTreeMap::new();
-    http_config_props.insert("routing_mode".to_string(), serde_yaml::Value::String("path".to_string()));
-    http_config_props.insert("address".to_string(), serde_yaml::Value::String("0.0.0.0:8000".to_string()));
+    http_config_props.insert(
+        "routing_mode".to_string(),
+        serde_yaml::Value::String("path".to_string()),
+    );
+    http_config_props.insert(
+        "address".to_string(),
+        serde_yaml::Value::String("0.0.0.0:8000".to_string()),
+    );
 
     let http_config = Config {
         name: "default-http-config".to_string(),
         properties: http_config_props,
     };
 
-    let http_properties = Properties {
-        application: None,
-        image: Some("ghcr.io/wasmcloud/http-server:0.27.0".to_string()),
+    let http_properties = Properties::WithImage {
+        image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
         config: vec![http_config],
     };
 
@@ -799,10 +765,19 @@ pub fn create_providers_wadm(workspace_slug: &str) -> WadmApplication {
     };
 
     // Messaging NATS component
-    let nats_properties = Properties {
-        application: None,
-        image: Some("ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string()),
-        config: vec![],
+    let nats_properties = Properties::WithImage {
+        image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
+        config: vec![Config {
+            name: "messaging-nats-config".to_string(),
+            properties: {
+                let mut props = BTreeMap::new();
+                props.insert(
+                    "cluster_uris".to_string(),
+                    serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
+                );
+                props
+            },
+        }],
     };
 
     let nats_trait = Trait {

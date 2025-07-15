@@ -87,7 +87,7 @@ pub async fn deploy_providers_to_wasm_cloud(
     settings: &Settings
 ) -> (StatusCode, Json<DeployResponse>) {
     // Create providers wadm config
-    let wadm_config = config_converter::create_providers_wadm(workspace_slug);
+    let wadm_config = config_converter::create_providers_wadm(workspace_slug, settings);
 
     // Convert to YAML string
     let wadm_yaml = match serde_yaml::to_string(&wadm_config) {
