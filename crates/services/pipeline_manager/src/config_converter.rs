@@ -339,10 +339,7 @@ pub fn convert_pipeline(
                             Trait {
                                 trait_type: "link".to_string(),
                                 properties: TraitProperties::Link(LinkProperties {
-                                    name: Some(format!(
-                                        "out-internal-for-{}-to-messaging-nats-link",
-                                        step.name
-                                    )),
+                                    name: None,
                                     source: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
@@ -464,10 +461,7 @@ pub fn convert_pipeline(
                             Trait {
                                 trait_type: "link".to_string(),
                                 properties: TraitProperties::Link(LinkProperties {
-                                    name: Some(format!(
-                                        "out-internal-for-{}-to-messaging-nats-link",
-                                        step.name
-                                    )),
+                                    name: None,
                                     source: None,
                                     target: LinkTarget::Name {
                                         name: "messaging-nats".to_string(),
@@ -499,10 +493,7 @@ pub fn convert_pipeline(
                         Trait {
                             trait_type: "link".to_string(),
                             properties: TraitProperties::Link(LinkProperties {
-                                name: Some(format!(
-                                    "in-internal-for-{}-to-messaging-nats-link",
-                                    step.name
-                                )),
+                                name: None,
                                 source: None,
                                 target: LinkTarget::Name {
                                     name: "messaging-nats".to_string(),
