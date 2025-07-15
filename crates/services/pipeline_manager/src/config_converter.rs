@@ -141,9 +141,18 @@ pub struct Component {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Properties {
-    pub image: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub application: Option<ApplicationRef>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config: Vec<Config>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApplicationRef {
+    pub name: String,
+    pub component: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -264,7 +273,8 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
+                        image: Some(format!("{}/pipestack/in-http:0.0.1", settings.registry.url)),
+                        application: None,
                         config: vec![],
                     },
                     traits: vec![
@@ -309,10 +319,11 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: format!(
+                            image: Some(format!(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
-                            ),
+                            )),
+                            application: None,
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -354,7 +365,8 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
+                        image: Some(format!("{}/pipestack/in-internal:0.0.1", settings.registry.url)),
+                        application: None,
                         config: vec![],
                     },
                     traits: vec![
@@ -395,14 +407,15 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!(
+                        image: Some(format!(
                             "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
                             settings.registry.url,
                             workspace_slug,
                             pipeline.name,
                             pipeline.version,
                             step.name
-                        ),
+                        )),
+                        application: None,
                         config: vec![],
                     },
                     traits: vec![Trait {
@@ -431,10 +444,11 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties {
-                            image: format!(
+                            image: Some(format!(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
-                            ),
+                            )),
+                            application: None,
                             config: vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
@@ -476,7 +490,8 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
+                        image: Some(format!("{}/pipestack/in-internal:0.0.1", settings.registry.url)),
+                        application: None,
                         config: vec![],
                     },
                     traits: vec![
@@ -517,7 +532,8 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties {
-                        image: format!("{}/pipestack/out-log:0.0.1", settings.registry.url),
+                        image: Some(format!("{}/pipestack/out-log:0.0.1", settings.registry.url)),
+                        application: None,
                         config: vec![],
                     },
                     traits: vec![Trait {
@@ -551,7 +567,11 @@ pub fn convert_pipeline(
             name: "httpserver".to_string(),
             component_type: "capability".to_string(),
             properties: Properties {
-                image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
+                image: None,
+                application: Some(ApplicationRef {
+                    name: format!("{}-providers", workspace_slug),
+                    component: "httpserver".to_string(),
+                }),
                 config: vec![Config {
                     name: "default-http-config".to_string(),
                     properties: {
@@ -704,7 +724,11 @@ pub fn convert_pipeline(
         name: "messaging-nats".to_string(),
         component_type: "capability".to_string(),
         properties: Properties {
-            image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
+            image: None,
+            application: Some(ApplicationRef {
+                name: format!("{}-providers", workspace_slug),
+                component: "messaging-nats".to_string(),
+            }),
             config: vec![Config {
                 name: "messaging-nats-config".to_string(),
                 properties: {
@@ -733,6 +757,76 @@ pub fn convert_pipeline(
         },
         spec: Spec { components },
     })
+}
+
+pub fn create_providers_wadm(workspace_slug: &str) -> WadmApplication {
+    let mut annotations = BTreeMap::new();
+    annotations.insert("experimental.wasmcloud.dev/shared".to_string(), "true".to_string());
+    annotations.insert("description".to_string(), format!("Shared providers for the {} workspace", workspace_slug));
+    annotations.insert("version".to_string(), "v0.0.1".to_string());
+
+    let metadata = Metadata {
+        name: format!("{}-providers", workspace_slug),
+        annotations,
+    };
+
+    // HTTP Server component
+    let mut http_config_props = BTreeMap::new();
+    http_config_props.insert("routing_mode".to_string(), serde_yaml::Value::String("path".to_string()));
+    http_config_props.insert("address".to_string(), serde_yaml::Value::String("0.0.0.0:8000".to_string()));
+
+    let http_config = Config {
+        name: "default-http-config".to_string(),
+        properties: http_config_props,
+    };
+
+    let http_properties = Properties {
+        application: None,
+        image: Some("ghcr.io/wasmcloud/http-server:0.27.0".to_string()),
+        config: vec![http_config],
+    };
+
+    let http_trait = Trait {
+        trait_type: "spreadscaler".to_string(),
+        properties: TraitProperties::Spreadscaler { instances: 1 },
+    };
+
+    let http_component = Component {
+        name: "httpserver".to_string(),
+        component_type: "capability".to_string(),
+        properties: http_properties,
+        traits: vec![http_trait],
+    };
+
+    // Messaging NATS component
+    let nats_properties = Properties {
+        application: None,
+        image: Some("ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string()),
+        config: vec![],
+    };
+
+    let nats_trait = Trait {
+        trait_type: "spreadscaler".to_string(),
+        properties: TraitProperties::Spreadscaler { instances: 1 },
+    };
+
+    let nats_component = Component {
+        name: "messaging-nats".to_string(),
+        component_type: "capability".to_string(),
+        properties: nats_properties,
+        traits: vec![nats_trait],
+    };
+
+    let spec = Spec {
+        components: vec![http_component, nats_component],
+    };
+
+    WadmApplication {
+        api_version: "core.oam.dev/v1beta1".to_string(),
+        kind: "Application".to_string(),
+        metadata,
+        spec,
+    }
 }
 
 #[cfg(test)]
@@ -895,7 +989,9 @@ spec:
   - name: httpserver
     type: capability
     properties:
-      image: ghcr.io/wasmcloud/http-server:0.27.0
+      application:
+        name: test-workspace-providers
+        component: httpserver
       config:
       - name: default-http-config
         properties:
@@ -922,7 +1018,9 @@ spec:
   - name: messaging-nats
     type: capability
     properties:
-      image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      application:
+        name: test-workspace-providers
+        component: messaging-nats
       config:
       - name: messaging-nats-config
         properties:
@@ -1175,7 +1273,9 @@ spec:
   - name: httpserver
     type: capability
     properties:
-      image: ghcr.io/wasmcloud/http-server:0.27.0
+      application:
+        name: test-workspace-providers
+        component: httpserver
       config:
       - name: default-http-config
         properties:
@@ -1202,7 +1302,9 @@ spec:
   - name: messaging-nats
     type: capability
     properties:
-      image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      application:
+        name: test-workspace-providers
+        component: messaging-nats
       config:
       - name: messaging-nats-config
         properties:
@@ -1332,7 +1434,9 @@ spec:
   - name: messaging-nats
     type: capability
     properties:
-      image: ghcr.io/wasmcloud/messaging-nats:0.27.0
+      application:
+        name: test-workspace-providers
+        component: messaging-nats
       config:
       - name: messaging-nats-config
         properties:

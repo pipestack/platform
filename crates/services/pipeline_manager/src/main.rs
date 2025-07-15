@@ -30,7 +30,8 @@ async fn main() {
     let state = AppState { settings };
 
     let app = Router::new()
-        .route("/deploy", post(deploy))
+        .route("/deploy", post(deploy_pipeline))
+        .route("/deploy-providers", post(deploy_providers))
         .route("/health", get(health))
         .with_state(state);
 
@@ -54,7 +55,7 @@ async fn health() -> (StatusCode, Json<serde_json::Value>) {
     )
 }
 
-async fn deploy(
+async fn deploy_pipeline(
     State(app_state): State<AppState>,
     Json(payload): Json<DeployRequest>,
 ) -> (StatusCode, Json<DeployResponse>) {
@@ -70,12 +71,27 @@ async fn deploy(
         );
     }
 
-    crate::wadm::deploy_to_wasm_cloud(&payload, &app_state.settings).await
+    crate::wadm::deploy_pipeline_to_wasm_cloud(&payload, &app_state.settings).await
+}
+
+async fn deploy_providers(
+    State(app_state): State<AppState>,
+    Json(payload): Json<DeployProvidersRequest>,
+) -> (StatusCode, Json<DeployResponse>) {
+    tracing::info!("Received deploy-providers request: {:?}", payload);
+
+    crate::wadm::deploy_providers_to_wasm_cloud(&payload.workspace_slug, &app_state.settings).await
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct DeployRequest {
     pipeline: Pipeline,
+    #[serde(rename = "workspaceSlug")]
+    workspace_slug: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct DeployProvidersRequest {
     #[serde(rename = "workspaceSlug")]
     workspace_slug: String,
 }
