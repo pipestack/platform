@@ -572,7 +572,7 @@ pub fn convert_pipeline(
                     source: Some(LinkSource {
                         name: None,
                         config: vec![Config {
-                            name: "path-config".to_string(),
+                            name: format!("{}-{}-httpserver-path-config", workspace_slug, pipeline.name),
                             properties: {
                                 let mut props = BTreeMap::new();
                                 props.insert(
