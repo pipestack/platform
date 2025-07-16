@@ -565,7 +565,10 @@ pub fn convert_pipeline(
             traits: vec![Trait {
                 trait_type: "link".to_string(),
                 properties: TraitProperties::Link(LinkProperties {
-                    name: Some(format!("httpserver-to-{}-link", http_step.name)),
+                    name: Some(format!(
+                        "httpserver-to-{}-{}-link",
+                        workspace_slug, http_step.name
+                    )),
                     source: Some(LinkSource {
                         name: None,
                         config: vec![Config {
@@ -604,8 +607,8 @@ pub fn convert_pipeline(
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
                         name: Some(format!(
-                            "messaging-nats-to-in-internal-for-{}-link",
-                            step.name
+                            "messaging-nats-to-{}-in-internal-for-{}-link",
+                            workspace_slug, step.name
                         )),
                         source: Some(LinkSource {
                             name: Some("messaging-nats".to_string()),
@@ -648,8 +651,8 @@ pub fn convert_pipeline(
                     trait_type: "link".to_string(),
                     properties: TraitProperties::Link(LinkProperties {
                         name: Some(format!(
-                            "messaging-nats-to-in-internal-for-{}-link",
-                            step.name
+                            "messaging-nats-to-{}-in-internal-for-{}-link",
+                            workspace_slug, step.name
                         )),
                         source: Some(LinkSource {
                             name: Some("messaging-nats".to_string()),
@@ -976,7 +979,7 @@ spec:
         instances: 1
     - type: link
       properties:
-        name: httpserver-to-in-http-webhook_http_1_1750048123367-link
+        name: httpserver-to-test-workspace-in-http-webhook_http_1_1750048123367-link
         source:
           config:
           - name: path-config
@@ -1004,7 +1007,7 @@ spec:
         instances: 1
     - type: link
       properties:
-        name: messaging-nats-to-in-internal-for-processor_wasm_2_1750048126167-link
+        name: messaging-nats-to-test-workspace-in-internal-for-processor_wasm_2_1750048126167-link
         source:
           name: messaging-nats
           config:
@@ -1020,7 +1023,7 @@ spec:
         - handler
     - type: link
       properties:
-        name: messaging-nats-to-in-internal-for-out-log_log_3_1750048128320-link
+        name: messaging-nats-to-test-workspace-in-internal-for-out-log_log_3_1750048128320-link
         source:
           name: messaging-nats
           config:
@@ -1260,7 +1263,7 @@ spec:
         instances: 1
     - type: link
       properties:
-        name: httpserver-to-in-http-webhook_http_1_1750048123367-link
+        name: httpserver-to-test-workspace-in-http-webhook_http_1_1750048123367-link
         source:
           config:
           - name: path-config
@@ -1288,7 +1291,7 @@ spec:
         instances: 1
     - type: link
       properties:
-        name: messaging-nats-to-in-internal-for-processor_wasm_2_1750048126167-link
+        name: messaging-nats-to-test-workspace-in-internal-for-processor_wasm_2_1750048126167-link
         source:
           name: messaging-nats
           config:
@@ -1304,7 +1307,7 @@ spec:
         - handler
     - type: link
       properties:
-        name: messaging-nats-to-in-internal-for-out-log_log_3_1750048128320-link
+        name: messaging-nats-to-test-workspace-in-internal-for-out-log_log_3_1750048128320-link
         source:
           name: messaging-nats
           config:
@@ -1320,7 +1323,7 @@ spec:
         - handler
     - type: link
       properties:
-        name: messaging-nats-to-in-internal-for-out-log_log_4_1750048128320-link
+        name: messaging-nats-to-test-workspace-in-internal-for-out-log_log_4_1750048128320-link
         source:
           name: messaging-nats
           config:
