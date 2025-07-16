@@ -6,6 +6,8 @@ processes:
       namespace: dev
       working_dir: crates/services/pipeline_manager
       command: |
+        wash app delete default-providers
+        wash app deploy ../../../config/dev/local-providers.yaml
         cargo watch -w . -x "run"
       environment:
         - "RUST_LOG=debug"
