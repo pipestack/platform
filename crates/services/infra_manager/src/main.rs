@@ -311,7 +311,7 @@ impl InfraManager {
         let mut env_variables = std::collections::HashMap::new();
         env_variables.insert(
             "RUST_LOG".to_string(),
-            "debug,hyper=info,async_nats=info,oci_client=info,cranelift_codegen=warn".to_string(),
+            "debug,hyper=info,async_nats=info,oci_client=info,cranelift_codegen=warn,opentelemetry_http=warn".to_string(),
         );
         env_variables.insert(
             "WASMCLOUD_CTL_HOST".to_string(),
