@@ -306,7 +306,7 @@ pub fn convert_pipeline(
                     .find(|s| {
                         s.depends_on
                             .as_ref()
-                            .map_or(false, |deps| deps.contains(&step.name))
+                            .is_some_and(|deps| deps.contains(&step.name))
                     })
                     .and_then(|s| step_topics.get(&s.name))
                     .cloned()
@@ -431,7 +431,7 @@ pub fn convert_pipeline(
                     .find(|s| {
                         s.depends_on
                             .as_ref()
-                            .map_or(false, |deps| deps.contains(&step.name))
+                            .is_some_and(|deps| deps.contains(&step.name))
                     })
                     .and_then(|s| step_topics.get(&s.name))
                     .cloned()

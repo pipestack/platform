@@ -30,7 +30,7 @@ impl Guest for Component {
             format!("Successfully posted a message with subject: {subject:?}").as_str(),
         );
 
-        format!("Done")
+        "Done".to_string()
     }
 }
 

@@ -29,7 +29,7 @@ pub struct Settings {
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let s = Config::builder()
-            .add_source(File::with_name(&".env.local").required(false))
+            .add_source(File::with_name(".env.local").required(false))
             .add_source(Environment::with_prefix("pipestack").separator("__"))
             .build()?;
 

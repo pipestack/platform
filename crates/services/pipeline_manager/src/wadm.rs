@@ -10,7 +10,7 @@ pub async fn deploy_pipeline_to_wasm_cloud(
     let wadm_config = match config_converter::convert_pipeline(
         &payload.pipeline,
         &payload.workspace_slug,
-        &settings,
+        settings,
     ) {
         Ok(config) => {
             tracing::info!("Successfully converted pipeline to WADM config");
@@ -80,7 +80,7 @@ pub async fn deploy_pipeline_to_wasm_cloud(
     (
         StatusCode::OK,
         Json(DeployResponse {
-            result: format!("Pipeline deployed successfully"),
+            result: "Pipeline deployed successfully".to_string(),
         }),
     )
 }
@@ -144,7 +144,7 @@ pub async fn deploy_providers_to_wasm_cloud(
             (
                 StatusCode::OK,
                 Json(DeployResponse {
-                    result: format!("Providers deployed successfully"),
+                    result: "Providers deployed successfully".to_string(),
                 }),
             )
         }

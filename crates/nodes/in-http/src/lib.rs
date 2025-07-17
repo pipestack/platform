@@ -30,7 +30,7 @@ impl http::Server for Component {
             })
             .unwrap_or("default message");
 
-        let received = pipestack::out::out::run(&message);
+        let received = pipestack::out::out::run(message);
 
         // let subject = wasi::config::runtime::get("topic-next-step")
         //     .expect("Unable to fetch value")
