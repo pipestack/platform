@@ -10,15 +10,11 @@ tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 reqwest.workspace = true
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid"] }
+sqlx = { version = "0.8", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "uuid",
+] }
 tokio-postgres = "0.7"
 anyhow = "1.0"
 chrono.workspace = true
-
-[[example]]
-name = "test_workspace_creation"
-path = "examples/test_workspace_creation.rs"
-
-[[example]]
-name = "advanced_sqlx_operations"
-path = "examples/advanced_sqlx_operations.rs"
