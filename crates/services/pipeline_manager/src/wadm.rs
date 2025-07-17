@@ -1,28 +1,31 @@
 use axum::{Json, http::StatusCode};
 
-use crate::{config_converter, settings::Settings, DeployRequest, DeployResponse};
+use crate::{DeployRequest, DeployResponse, config_converter, settings::Settings};
 
 pub async fn deploy_pipeline_to_wasm_cloud(
     payload: &DeployRequest,
-    settings: &Settings
+    settings: &Settings,
 ) -> (StatusCode, Json<DeployResponse>) {
     // Convert payload to a valid wadm file
-    let wadm_config =
-        match config_converter::convert_pipeline(&payload.pipeline, &payload.workspace_slug, &settings) {
-            Ok(config) => {
-                tracing::info!("Successfully converted pipeline to WADM config");
-                config
-            }
-            Err(e) => {
-                tracing::error!("Failed to convert pipeline: {}", e);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(DeployResponse {
-                        result: format!("Error converting pipeline: {}", e),
-                    }),
-                );
-            }
-        };
+    let wadm_config = match config_converter::convert_pipeline(
+        &payload.pipeline,
+        &payload.workspace_slug,
+        &settings,
+    ) {
+        Ok(config) => {
+            tracing::info!("Successfully converted pipeline to WADM config");
+            config
+        }
+        Err(e) => {
+            tracing::error!("Failed to convert pipeline: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DeployResponse {
+                    result: format!("Error converting pipeline: {}", e),
+                }),
+            );
+        }
+    };
 
     // Convert to YAML string
     let wadm_yaml = match serde_yaml::to_string(&wadm_config) {
@@ -84,7 +87,7 @@ pub async fn deploy_pipeline_to_wasm_cloud(
 
 pub async fn deploy_providers_to_wasm_cloud(
     workspace_slug: &str,
-    settings: &Settings
+    settings: &Settings,
 ) -> (StatusCode, Json<DeployResponse>) {
     // Create providers wadm config
     let wadm_config = config_converter::create_providers_wadm(workspace_slug, settings);
@@ -134,7 +137,7 @@ pub async fn deploy_providers_to_wasm_cloud(
         "Putting and deploying providers manifest: {}",
         &wadm_config.metadata.name
     );
-    
+
     match client.put_and_deploy_manifest(wadm_yaml.as_bytes()).await {
         Ok(_) => {
             tracing::info!("Providers deployed successfully");

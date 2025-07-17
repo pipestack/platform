@@ -46,13 +46,14 @@ impl Config {
     pub fn from_env() -> Result<Self> {
         let database_url = env::var("DATABASE_URL")
             .map_err(|_| anyhow::anyhow!("DATABASE_URL environment variable is required"))?;
-        
-        let railway_environment_id = env::var("RAILWAY_ENVIRONMENT_ID")
-            .map_err(|_| anyhow::anyhow!("RAILWAY_ENVIRONMENT_ID environment variable is required"))?;
+
+        let railway_environment_id = env::var("RAILWAY_ENVIRONMENT_ID").map_err(|_| {
+            anyhow::anyhow!("RAILWAY_ENVIRONMENT_ID environment variable is required")
+        })?;
 
         let railway_token = env::var("RAILWAY_TOKEN")
             .map_err(|_| anyhow::anyhow!("RAILWAY_TOKEN environment variable is required"))?;
-        
+
         let railway_project_id = env::var("RAILWAY_PROJECT_ID")
             .map_err(|_| anyhow::anyhow!("RAILWAY_PROJECT_ID environment variable is required"))?;
 
@@ -62,14 +63,14 @@ impl Config {
         let default_template_repo = env::var("RAILWAY_DEFAULT_TEMPLATE_REPO")
             .unwrap_or_else(|_| "pipestack/wasmcloud-infra".to_string());
 
-        let default_branch = env::var("RAILWAY_DEFAULT_BRANCH")
-            .unwrap_or_else(|_| "main".to_string());
+        let default_branch =
+            env::var("RAILWAY_DEFAULT_BRANCH").unwrap_or_else(|_| "main".to_string());
 
         let notification_channel = env::var("DATABASE_NOTIFICATION_CHANNEL")
             .unwrap_or_else(|_| "workspace_created".to_string());
 
-        let service_name_prefix = env::var("SERVICE_NAME_PREFIX")
-            .unwrap_or_else(|_| "wasmcloud".to_string());
+        let service_name_prefix =
+            env::var("SERVICE_NAME_PREFIX").unwrap_or_else(|_| "wasmcloud".to_string());
 
         let max_retries = env::var("MAX_RETRIES")
             .unwrap_or_else(|_| "3".to_string())

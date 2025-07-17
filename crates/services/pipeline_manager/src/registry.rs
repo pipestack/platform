@@ -137,8 +137,12 @@ pub async fn publish_wasm_components(
 
         let full_image_ref = format!(
             "{}:{}",
-            if settings.registry.url.starts_with("http://") || settings.registry.url.starts_with("https://") {
-                let registry_without_protocol = &settings.registry.url
+            if settings.registry.url.starts_with("http://")
+                || settings.registry.url.starts_with("https://")
+            {
+                let registry_without_protocol = &settings
+                    .registry
+                    .url
                     .trim_start_matches("https://")
                     .trim_start_matches("http://")
                     .trim_end_matches('/');
