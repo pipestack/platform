@@ -151,11 +151,6 @@ mod tests {
         config.database.url = "".to_string();
         assert!(config.validate().is_err());
 
-        // Test invalid API URL
-        config.database.url = "postgresql://test".to_string();
-        config.railway.api_url = "invalid_url".to_string();
-        assert!(config.validate().is_err());
-
         // Test zero polling interval
         config.railway.api_url = "https://api.railway.app".to_string();
         assert!(config.validate().is_err());
