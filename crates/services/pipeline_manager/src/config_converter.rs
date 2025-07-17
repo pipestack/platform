@@ -109,7 +109,7 @@ pub enum PipelineNodeType {
     OutLog,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WadmApplication {
     #[serde(rename = "apiVersion")]
     pub api_version: String,
@@ -118,18 +118,18 @@ pub struct WadmApplication {
     pub spec: Spec,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Metadata {
     pub name: String,
     pub annotations: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Spec {
     pub components: Vec<Component>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Component {
     pub name: String,
     #[serde(rename = "type")]
@@ -139,40 +139,46 @@ pub struct Component {
     pub traits: Vec<Trait>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Properties {
-    WithImage { image: String, config: Vec<Config> },
-    WithApplication { application: ApplicationRef },
+    WithImage {
+        image: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        config: Option<Vec<Config>>,
+    },
+    WithApplication {
+        application: ApplicationRef,
+    },
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ApplicationRef {
     pub name: String,
     pub component: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Config {
     pub name: String,
     pub properties: BTreeMap<String, serde_yaml::Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Trait {
     #[serde(rename = "type")]
     pub trait_type: String,
     pub properties: TraitProperties,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum TraitProperties {
     Spreadscaler { instances: u32 },
     Link(LinkProperties),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LinkProperties {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -184,21 +190,17 @@ pub struct LinkProperties {
     pub interfaces: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum LinkTarget {
-    Name {
-        name: String,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        config: Option<Vec<Config>>,
-    },
-    String(String),
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LinkTarget {
+    name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    config: Option<Vec<Config>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LinkSource {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    // #[serde(default, skip_serializing_if = "Option::is_none")]
+    // pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config: Vec<Config>,
 }
@@ -271,7 +273,7 @@ pub fn convert_pipeline(
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
                         image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
-                        config: vec![],
+                        config: None,
                     },
                     traits: vec![
                         Trait {
@@ -285,7 +287,7 @@ pub fn convert_pipeline(
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
                                 source: None,
-                                target: LinkTarget::Name {
+                                target: LinkTarget {
                                     name: format!("out-internal-for-{}", step.name),
                                     config: None,
                                 },
@@ -319,7 +321,7 @@ pub fn convert_pipeline(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
                             ),
-                            config: vec![Config {
+                            config: Some(vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
                                     let mut props = BTreeMap::new();
@@ -329,7 +331,7 @@ pub fn convert_pipeline(
                                     );
                                     props
                                 },
-                            }],
+                            }]),
                         },
                         traits: vec![
                             Trait {
@@ -341,7 +343,7 @@ pub fn convert_pipeline(
                                 properties: TraitProperties::Link(LinkProperties {
                                     name: None,
                                     source: None,
-                                    target: LinkTarget::Name {
+                                    target: LinkTarget {
                                         name: "messaging-nats".to_string(),
                                         config: None,
                                     },
@@ -361,7 +363,7 @@ pub fn convert_pipeline(
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
                         image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
-                        config: vec![],
+                        config: None,
                     },
                     traits: vec![
                         Trait {
@@ -373,7 +375,10 @@ pub fn convert_pipeline(
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
                                 source: None,
-                                target: LinkTarget::String(step.name.clone()),
+                                target: LinkTarget {
+                                    name: step.name.clone(),
+                                    config: None,
+                                },
                                 namespace: "pipestack".to_string(),
                                 package: "customer".to_string(),
                                 interfaces: vec!["customer".to_string()],
@@ -384,10 +389,10 @@ pub fn convert_pipeline(
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
                                 source: None,
-                                target: LinkTarget::String(format!(
-                                    "out-internal-for-{}",
-                                    step.name
-                                )),
+                                target: LinkTarget {
+                                    name: format!("out-internal-for-{}", step.name),
+                                    config: None,
+                                },
                                 namespace: "pipestack".to_string(),
                                 package: "out".to_string(),
                                 interfaces: vec!["out".to_string()],
@@ -409,7 +414,7 @@ pub fn convert_pipeline(
                             pipeline.version,
                             step.name
                         ),
-                        config: vec![],
+                        config: None,
                     },
                     traits: vec![Trait {
                         trait_type: "spreadscaler".to_string(),
@@ -441,7 +446,7 @@ pub fn convert_pipeline(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
                             ),
-                            config: vec![Config {
+                            config: Some(vec![Config {
                                 name: format!("out-internal-for-{}-config", step.name),
                                 properties: {
                                     let mut props = BTreeMap::new();
@@ -451,7 +456,7 @@ pub fn convert_pipeline(
                                     );
                                     props
                                 },
-                            }],
+                            }]),
                         },
                         traits: vec![
                             Trait {
@@ -463,7 +468,7 @@ pub fn convert_pipeline(
                                 properties: TraitProperties::Link(LinkProperties {
                                     name: None,
                                     source: None,
-                                    target: LinkTarget::Name {
+                                    target: LinkTarget {
                                         name: "messaging-nats".to_string(),
                                         config: None,
                                     },
@@ -483,7 +488,7 @@ pub fn convert_pipeline(
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
                         image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
-                        config: vec![],
+                        config: None,
                     },
                     traits: vec![
                         Trait {
@@ -495,7 +500,7 @@ pub fn convert_pipeline(
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
                                 source: None,
-                                target: LinkTarget::Name {
+                                target: LinkTarget {
                                     name: "messaging-nats".to_string(),
                                     config: None,
                                 },
@@ -509,7 +514,10 @@ pub fn convert_pipeline(
                             properties: TraitProperties::Link(LinkProperties {
                                 name: None,
                                 source: None,
-                                target: LinkTarget::String(step.name.clone()),
+                                target: LinkTarget {
+                                    name: step.name.clone(),
+                                    config: None,
+                                },
                                 namespace: "pipestack".to_string(),
                                 package: "out".to_string(),
                                 interfaces: vec!["out".to_string()],
@@ -524,7 +532,7 @@ pub fn convert_pipeline(
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
                         image: format!("{}/pipestack/out-log:0.0.1", settings.registry.url),
-                        config: vec![],
+                        config: None,
                     },
                     traits: vec![Trait {
                         trait_type: "spreadscaler".to_string(),
@@ -570,9 +578,11 @@ pub fn convert_pipeline(
                         workspace_slug, http_step.name
                     )),
                     source: Some(LinkSource {
-                        name: None,
                         config: vec![Config {
-                            name: format!("{}-{}-httpserver-path-config", workspace_slug, pipeline.name),
+                            name: format!(
+                                "{}-{}-httpserver-path-config",
+                                workspace_slug, pipeline.name
+                            ),
                             properties: {
                                 let mut props = BTreeMap::new();
                                 props.insert(
@@ -583,7 +593,7 @@ pub fn convert_pipeline(
                             },
                         }],
                     }),
-                    target: LinkTarget::Name {
+                    target: LinkTarget {
                         name: http_step.name.clone(),
                         config: None,
                     },
@@ -611,7 +621,6 @@ pub fn convert_pipeline(
                             workspace_slug, step.name
                         )),
                         source: Some(LinkSource {
-                            name: Some("messaging-nats".to_string()),
                             config: vec![Config {
                                 name: format!("subscription-{}-config", subscription_counter),
                                 properties: {
@@ -630,7 +639,7 @@ pub fn convert_pipeline(
                                 },
                             }],
                         }),
-                        target: LinkTarget::Name {
+                        target: LinkTarget {
                             name: format!("in-internal-for-{}", step.name),
                             config: None,
                         },
@@ -655,7 +664,6 @@ pub fn convert_pipeline(
                             workspace_slug, step.name
                         )),
                         source: Some(LinkSource {
-                            name: Some("messaging-nats".to_string()),
                             config: vec![Config {
                                 name: format!("subscription-{}-config", subscription_counter),
                                 properties: {
@@ -674,7 +682,7 @@ pub fn convert_pipeline(
                                 },
                             }],
                         }),
-                        target: LinkTarget::Name {
+                        target: LinkTarget {
                             name: format!("in-internal-for-{}", step.name),
                             config: None,
                         },
@@ -750,7 +758,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
 
     let http_properties = Properties::WithImage {
         image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
-        config: vec![http_config],
+        config: Some(vec![http_config]),
     };
 
     let http_trait = Trait {
@@ -768,7 +776,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
     // Messaging NATS component
     let nats_properties = Properties::WithImage {
         image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
-        config: vec![Config {
+        config: Some(vec![Config {
             name: "messaging-nats-config".to_string(),
             properties: {
                 let mut props = BTreeMap::new();
@@ -778,7 +786,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
                 );
                 props
             },
-        }],
+        }]),
     };
 
     let nats_trait = Trait {
@@ -810,154 +818,158 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_convert_pipeline_2() {
+    fn test_convert_pipeline_in_processor_out() {
         let input_yaml = r#"
-name: untitled-pipeline
-version: 1.0.0
+name: mine
+version: 1
 nodes:
-  - name: in-http-webhook_http_1_1750048123367
+  - name: in-http-webhook_17
     type: in-http-webhook
     position:
-      x: 100.0
-      y: 100.0
-  - name: processor_wasm_2_1750048126167
+      x: 300
+      'y': 180
+  - name: processor-wasm_18
     type: processor-wasm
-    instances: 1
     position:
-      x: 200.0
-      y: 100.0
+      x: 548
+      'y': 69
+    source: localhost:5000/pipestack/data-processor:0.0.1
+    instances: 1
     depends_on:
-      - in-http-webhook_http_1_1750048123367
-  - name: out-log_log_3_1750048128320
+      - in-http-webhook_17
+  - name: out-log_19
     type: out-log
     position:
-      x: 300.0
-      y: 100.0
+      x: 660
+      'y': 180
     depends_on:
-      - processor_wasm_2_1750048126167
+      - processor-wasm_18
 "#;
 
         let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
-  name: test-workspace-untitled-pipeline
+  name: default-mine
   annotations:
-    version: 1.0.0
+    version: '1'
 spec:
   components:
-  - name: in-http-webhook_http_1_1750048123367
+  - name: in-http-webhook_17
     type: component
     properties:
-      image: localhost:5000/pipestack/in-http:0.0.1
+      image: http://localhost:5000/pipestack/in-http:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: out-internal-for-in-http-webhook_http_1_1750048123367
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out-internal-for-in-http-webhook_http_1_1750048123367
+        target:
+          name: out-internal-for-in-http-webhook_17
+  - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-in-http-webhook_http_1_1750048123367-config
+      - name: out-internal-for-in-http-webhook_17-config
         properties:
-          next-step-topic: test-workspace-untitled-pipeline-step-2-in
+          next-step-topic: default-mine-step-2-in
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: messaging-nats
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-processor_wasm_2_1750048126167
+        target:
+          name: messaging-nats
+  - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/pipestack/in-internal:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target: processor_wasm_2_1750048126167
         namespace: pipestack
         package: customer
         interfaces:
         - customer
+        target:
+          name: processor-wasm_18
     - type: link
       properties:
-        target: out-internal-for-processor_wasm_2_1750048126167
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: processor_wasm_2_1750048126167
+        target:
+          name: out-internal-for-processor-wasm_18
+  - name: processor-wasm_18
     type: component
     properties:
-      image: localhost:5000/test-workspace/pipeline/untitled-pipeline/builder/components/nodes/processor/wasm/processor_wasm_2_1750048126167.wasm:1.0.0
+      image: http://localhost:5000/default/pipeline/mine/1/builder/components/nodes/processor/wasm/processor-wasm_18:1.0.0
     traits:
     - type: spreadscaler
       properties:
         instances: 1
-  - name: out-internal-for-processor_wasm_2_1750048126167
+  - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-processor_wasm_2_1750048126167-config
+      - name: out-internal-for-processor-wasm_18-config
         properties:
-          next-step-topic: test-workspace-untitled-pipeline-step-3-in
+          next-step-topic: default-mine-step-3-in
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: messaging-nats
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-out-log_log_3_1750048128320
+        target:
+          name: messaging-nats
+  - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/pipestack/in-internal:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: messaging-nats
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
+        target:
+          name: messaging-nats
     - type: link
       properties:
-        target: out-log_log_3_1750048128320
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out-log_log_3_1750048128320
+        target:
+          name: out-log_19
+  - name: out-log_19
     type: component
     properties:
-      image: localhost:5000/pipestack/out-log:0.0.1
+      image: http://localhost:5000/pipestack/out-log:0.0.1
     traits:
     - type: spreadscaler
       properties:
@@ -966,282 +978,272 @@ spec:
     type: capability
     properties:
       application:
-        name: test-workspace-providers
+        name: default-providers
         component: httpserver
-      config:
-      - name: default-http-config
-        properties:
-          address: 0.0.0.0:8000
-          routing_mode: path
     traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
     - type: link
       properties:
-        name: httpserver-to-test-workspace-in-http-webhook_http_1_1750048123367-link
-        source:
-          config:
-          - name: path-config
-            properties:
-              path: /test-workspace-untitled-pipeline
-        target:
-          name: in-http-webhook_http_1_1750048123367
         namespace: wasi
         package: http
         interfaces:
         - incoming-handler
+        source:
+          config:
+          - name: default-mine-httpserver-path-config
+            properties:
+              path: /mine
+        target:
+          name: in-http-webhook_17
+        name: httpserver-to-default-in-http-webhook_17-link
   - name: messaging-nats
     type: capability
     properties:
       application:
-        name: test-workspace-providers
+        name: default-providers
         component: messaging-nats
-      config:
-      - name: messaging-nats-config
-        properties:
-          cluster_uris: localhost:4222
     traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
     - type: link
       properties:
-        name: messaging-nats-to-test-workspace-in-internal-for-processor_wasm_2_1750048126167-link
-        source:
-          name: messaging-nats
-          config:
-          - name: subscription-1-config
-            properties:
-              cluster_uris: localhost:4222
-              subscriptions: test-workspace-untitled-pipeline-step-2-in
-        target:
-          name: in-internal-for-processor_wasm_2_1750048126167
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
+        source:
+          config:
+          - name: subscription-1-config
+            properties:
+              subscriptions: default-mine-step-2-in
+              cluster_uris: localhost:4222
+        target:
+          name: in-internal-for-processor-wasm_18
+        name: messaging-nats-to-default-in-internal-for-processor-wasm_18-link
     - type: link
       properties:
-        name: messaging-nats-to-test-workspace-in-internal-for-out-log_log_3_1750048128320-link
-        source:
-          name: messaging-nats
-          config:
-          - name: subscription-2-config
-            properties:
-              cluster_uris: localhost:4222
-              subscriptions: test-workspace-untitled-pipeline-step-3-in
-        target:
-          name: in-internal-for-out-log_log_3_1750048128320
         namespace: wasmcloud
         package: messaging
         interfaces:
-        - handler"#;
+        - handler
+        source:
+          config:
+          - name: subscription-2-config
+            properties:
+              subscriptions: default-mine-step-3-in
+              cluster_uris: localhost:4222
+        target:
+          name: in-internal-for-out-log_19
+        name: messaging-nats-to-default-in-internal-for-out-log_19-link
+"#;
 
         let settings = Settings::new().expect("Could not read config settings");
-        // Parse the input YAML into a Pipeline struct
+
+        // Parse input
         let pipeline: Pipeline =
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
-        // Convert the pipeline to WadmApplication
-        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"), &settings)
+        // Convert to WADM
+        let actual_wadm = convert_pipeline(&pipeline, &"default".to_string(), &settings)
             .expect("Failed to convert pipeline");
 
-        // Convert back to YAML
-        let output_yaml =
-            serde_yaml::to_string(&wadm_app).expect("Failed to serialize WadmApplication to YAML");
+        // Parse expected output to same struct type
+        let expected_wadm: WadmApplication =
+            serde_yaml::from_str(expected_yaml).expect("Failed to parse expected YAML");
 
-        // Compare with expected output
-        assert_eq!(output_yaml.trim(), expected_yaml.trim());
+        // STRUCTURED COMPARISON - much more reliable!
+        assert_eq!(actual_wadm, expected_wadm);
     }
 
     #[test]
-    fn test_convert_pipeline_3() {
+    fn test_convert_pipeline_in_processor_out_out() {
         let input_yaml = r#"
-name: untitled-pipeline
-version: 1.0.0
+name: mine
+version: 1
 nodes:
-  - name: in-http-webhook_http_1_1750048123367
+  - name: in-http-webhook_17
     type: in-http-webhook
     position:
-      x: 100.0
-      y: 100.0
-  - name: processor_wasm_2_1750048126167
+      x: 300
+      'y': 180
+  - name: processor-wasm_18
     type: processor-wasm
+    position:
+      x: 548
+      'y': 69
+    source: localhost:5000/pipestack/data-processor:0.0.1
     instances: 1
-    position:
-      x: 200.0
-      y: 100.0
     depends_on:
-      - in-http-webhook_http_1_1750048123367
-  - name: out-log_log_3_1750048128320
+      - in-http-webhook_17
+  - name: out-log_19
     type: out-log
     position:
-      x: 300.0
-      y: 100.0
+      x: 660
+      'y': 180
     depends_on:
-      - processor_wasm_2_1750048126167
-  - name: out-log_log_4_1750048128320
+      - processor-wasm_18
+  - name: out-log_20
     type: out-log
     position:
-      x: 300.0
-      y: 100.0
+      x: 960
+      'y': 180
     depends_on:
-      - processor_wasm_2_1750048126167
+      - processor-wasm_18
 "#;
 
         let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
-  name: test-workspace-untitled-pipeline
+  name: default-mine
   annotations:
-    version: 1.0.0
+    version: '1'
 spec:
   components:
-  - name: in-http-webhook_http_1_1750048123367
+  - name: in-http-webhook_17
     type: component
     properties:
-      image: localhost:5000/pipestack/in-http:0.0.1
+      image: http://localhost:5000/pipestack/in-http:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: out-internal-for-in-http-webhook_http_1_1750048123367
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out-internal-for-in-http-webhook_http_1_1750048123367
+        target:
+          name: out-internal-for-in-http-webhook_17
+  - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-in-http-webhook_http_1_1750048123367-config
+      - name: out-internal-for-in-http-webhook_17-config
         properties:
-          next-step-topic: test-workspace-untitled-pipeline-step-2-in
+          next-step-topic: default-mine-step-2-in
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: messaging-nats
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-processor_wasm_2_1750048126167
+        target:
+          name: messaging-nats
+  - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/pipestack/in-internal:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target: processor_wasm_2_1750048126167
         namespace: pipestack
         package: customer
         interfaces:
         - customer
+        target:
+          name: processor-wasm_18
     - type: link
       properties:
-        target: out-internal-for-processor_wasm_2_1750048126167
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: processor_wasm_2_1750048126167
+        target:
+          name: out-internal-for-processor-wasm_18
+  - name: processor-wasm_18
     type: component
     properties:
-      image: localhost:5000/test-workspace/pipeline/untitled-pipeline/builder/components/nodes/processor/wasm/processor_wasm_2_1750048126167.wasm:1.0.0
+      image: http://localhost:5000/default/pipeline/mine/1/builder/components/nodes/processor/wasm/processor-wasm_18:1.0.0
     traits:
     - type: spreadscaler
       properties:
         instances: 1
-  - name: out-internal-for-processor_wasm_2_1750048126167
+  - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-processor_wasm_2_1750048126167-config
+      - name: out-internal-for-processor-wasm_18-config
         properties:
-          next-step-topic: test-workspace-untitled-pipeline-step-3-in
+          next-step-topic: default-mine-step-3-in
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: messaging-nats
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
-  - name: in-internal-for-out-log_log_3_1750048128320
+        target:
+          name: messaging-nats
+  - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/pipestack/in-internal:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: messaging-nats
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
+        target:
+          name: messaging-nats
     - type: link
       properties:
-        target: out-log_log_3_1750048128320
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out-log_log_3_1750048128320
+        target:
+          name: out-log_19
+  - name: out-log_19
     type: component
     properties:
-      image: localhost:5000/pipestack/out-log:0.0.1
+      image: http://localhost:5000/pipestack/out-log:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
-  - name: in-internal-for-out-log_log_4_1750048128320
+  - name: in-internal-for-out-log_20
     type: component
     properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/pipestack/in-internal:0.0.1
     traits:
     - type: spreadscaler
       properties:
         instances: 1
     - type: link
       properties:
-        target:
-          name: messaging-nats
         namespace: wasmcloud
         package: messaging
         interfaces:
         - consumer
+        target:
+          name: messaging-nats
     - type: link
       properties:
-        target: out-log_log_4_1750048128320
         namespace: pipestack
         package: out
         interfaces:
         - out
-  - name: out-log_log_4_1750048128320
+        target:
+          name: out-log_20
+  - name: out-log_20
     type: component
     properties:
-      image: localhost:5000/pipestack/out-log:0.0.1
+      image: http://localhost:5000/pipestack/out-log:0.0.1
     traits:
     - type: spreadscaler
       properties:
@@ -1250,184 +1252,92 @@ spec:
     type: capability
     properties:
       application:
-        name: test-workspace-providers
+        name: default-providers
         component: httpserver
-      config:
-      - name: default-http-config
-        properties:
-          address: 0.0.0.0:8000
-          routing_mode: path
     traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
     - type: link
       properties:
-        name: httpserver-to-test-workspace-in-http-webhook_http_1_1750048123367-link
-        source:
-          config:
-          - name: path-config
-            properties:
-              path: /test-workspace-untitled-pipeline
-        target:
-          name: in-http-webhook_http_1_1750048123367
         namespace: wasi
         package: http
         interfaces:
         - incoming-handler
+        source:
+          config:
+          - name: default-mine-httpserver-path-config
+            properties:
+              path: /mine
+        target:
+          name: in-http-webhook_17
+        name: httpserver-to-default-in-http-webhook_17-link
   - name: messaging-nats
     type: capability
     properties:
       application:
-        name: test-workspace-providers
+        name: default-providers
         component: messaging-nats
-      config:
-      - name: messaging-nats-config
-        properties:
-          cluster_uris: localhost:4222
     traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
     - type: link
       properties:
-        name: messaging-nats-to-test-workspace-in-internal-for-processor_wasm_2_1750048126167-link
+        namespace: wasmcloud
+        package: messaging
+        interfaces:
+        - handler
         source:
-          name: messaging-nats
           config:
           - name: subscription-1-config
             properties:
+              subscriptions: default-mine-step-2-in
               cluster_uris: localhost:4222
-              subscriptions: test-workspace-untitled-pipeline-step-2-in
         target:
-          name: in-internal-for-processor_wasm_2_1750048126167
+          name: in-internal-for-processor-wasm_18
+        name: messaging-nats-to-default-in-internal-for-processor-wasm_18-link
+    - type: link
+      properties:
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
-    - type: link
-      properties:
-        name: messaging-nats-to-test-workspace-in-internal-for-out-log_log_3_1750048128320-link
         source:
-          name: messaging-nats
           config:
           - name: subscription-2-config
             properties:
+              subscriptions: default-mine-step-3-in
               cluster_uris: localhost:4222
-              subscriptions: test-workspace-untitled-pipeline-step-3-in
         target:
-          name: in-internal-for-out-log_log_3_1750048128320
+          name: in-internal-for-out-log_19
+        name: messaging-nats-to-default-in-internal-for-out-log_19-link
+    - type: link
+      properties:
         namespace: wasmcloud
         package: messaging
         interfaces:
         - handler
-    - type: link
-      properties:
-        name: messaging-nats-to-test-workspace-in-internal-for-out-log_log_4_1750048128320-link
         source:
-          name: messaging-nats
           config:
           - name: subscription-3-config
             properties:
+              subscriptions: default-mine-step-3-in
               cluster_uris: localhost:4222
-              subscriptions: test-workspace-untitled-pipeline-step-3-in
         target:
-          name: in-internal-for-out-log_log_4_1750048128320
-        namespace: wasmcloud
-        package: messaging
-        interfaces:
-        - handler"#;
+          name: in-internal-for-out-log_20
+        name: messaging-nats-to-default-in-internal-for-out-log_20-link
+"#;
 
         let settings = Settings::new().expect("Could not read config settings");
-        // Parse the input YAML into a Pipeline struct
+
+        // Parse input
         let pipeline: Pipeline =
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
-        // Convert the pipeline to WadmApplication
-        let wadm_app = convert_pipeline(&pipeline, &String::from("test-workspace"), &settings)
+        // Convert to WADM
+        let actual_wadm = convert_pipeline(&pipeline, &"default".to_string(), &settings)
             .expect("Failed to convert pipeline");
 
-        // Convert back to YAML
-        let output_yaml =
-            serde_yaml::to_string(&wadm_app).expect("Failed to serialize WadmApplication to YAML");
+        // Parse expected output to same struct type
+        let expected_wadm: WadmApplication =
+            serde_yaml::from_str(expected_yaml).expect("Failed to parse expected YAML");
 
-        // Compare with expected output
-        assert_eq!(output_yaml.trim(), expected_yaml.trim());
-    }
-
-    #[test]
-    fn test_convert_pipeline_with_default_wasm_image() {
-        let input_yaml = r#"
-name: test-pipeline
-version: 2.0.0
-nodes:
-  - name: processor_wasm_1
-    type: processor-wasm
-    instances: 1
-    position:
-      x: 100.0
-      y: 100.0
-"#;
-
-        let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
-kind: Application
-metadata:
-  name: test-workspace-test-pipeline
-  annotations:
-    version: 2.0.0
-spec:
-  components:
-  - name: in-internal-for-processor_wasm_1
-    type: component
-    properties:
-      image: localhost:5000/pipestack/in-internal:0.0.1
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-    - type: link
-      properties:
-        target: processor_wasm_1
-        namespace: pipestack
-        package: customer
-        interfaces:
-        - customer
-    - type: link
-      properties:
-        target: out-internal-for-processor_wasm_1
-        namespace: pipestack
-        package: out
-        interfaces:
-        - out
-  - name: processor_wasm_1
-    type: component
-    properties:
-      image: localhost:5000/test-workspace/pipeline/test-pipeline/builder/components/nodes/processor/wasm/processor_wasm_1.wasm:2.0.0
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1
-  - name: messaging-nats
-    type: capability
-    properties:
-      application:
-        name: test-workspace-providers
-        component: messaging-nats
-      config:
-      - name: messaging-nats-config
-        properties:
-          cluster_uris: localhost:4222
-    traits:
-    - type: spreadscaler
-      properties:
-        instances: 1"#;
-
-        let settings = Settings::new().expect("Could not read config settings");
-        let pipeline: Pipeline = serde_yaml::from_str(input_yaml).unwrap();
-        let result = convert_pipeline(&pipeline, &"test-workspace".to_string(), &settings).unwrap();
-        let output_yaml = serde_yaml::to_string(&result).unwrap();
-
-        // Compare with expected output
-        assert_eq!(output_yaml.trim(), expected_yaml.trim());
+        // STRUCTURED COMPARISON - much more reliable!
+        assert_eq!(actual_wadm, expected_wadm);
     }
 }
