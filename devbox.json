@@ -1,29 +1,40 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.2/.schema/devbox.schema.json",
-  "packages": [
-    "rustup@latest",
-    "libiconv@latest",
-    "just@latest",
-    "process-compose@latest"
-  ],
+  "packages": {
+    "rustup":          "latest",
+    "libiconv":        "latest",
+    "just":            "latest",
+    "process-compose": "latest",
+    "openssl.dev": {
+      "platforms": ["x86_64-linux"]
+    },
+    "openssl": {
+      "version":   "latest",
+      "platforms": ["x86_64-linux"]
+    },
+    "pkg-config": {
+      "version":   "latest",
+      "platforms": ["x86_64-linux"]
+    }
+  },
   "env": {
     "WASMCLOUD_OBSERVABILITY_ENABLED": "true",
-    "OTEL_TRACES_EXPORTER": "otlp",
-    "WASMCLOUD_VERSION": "1.8.0",
-    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:4318",
-    "WASMCLOUD_OCI_ALLOWED_INSECURE": "localhost:5000",
-    "PATH": "$HOME/.cargo/bin:$PATH"
+    "OTEL_TRACES_EXPORTER":            "otlp",
+    "WASMCLOUD_VERSION":               "1.8.0",
+    "OTEL_EXPORTER_OTLP_ENDPOINT":     "http://127.0.0.1:4318",
+    "WASMCLOUD_OCI_ALLOWED_INSECURE":  "localhost:5000",
+    "PATH":                            "$HOME/.cargo/bin:$PATH"
   },
   "shell": {
     "init_hook": [
-      "cargo install wash",
-      "cargo install cargo-watch",
+      "[ \"$CI\" != \"true\" ] && cargo install wash --locked",
+      "[ \"$CI\" != \"true\" ] && cargo install cargo-watch --locked",
       "cargo fetch"
     ],
     "scripts": {
-      "services": "process-compose",
+      "services":            "process-compose",
       "webapp:schema:build": "cd ./crates/schemas/pipeline && cargo run > ../../../../../webapp/main/static/pipeline.schema.json && cd -",
-      "webapp:types:build": "cd ./crates/services/pipeline_manager/ && cargo test export_bindings && cp bindings/pipeline.ts ../../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion=pipeline_version]/builder/types-rust.ts && cd -"
+      "webapp:types:build":  "cd ./crates/services/pipeline_manager/ && cargo test export_bindings && cp bindings/pipeline.ts ../../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion=pipeline_version]/builder/types-rust.ts && cd -"
     }
   }
 }

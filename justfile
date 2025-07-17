@@ -5,6 +5,7 @@ wash-run-all command="build":
         if [ -d "$dir" ]; then
             echo "👷 Running command '{{command}}' in $dir ..."
             cd "$dir"
+            wash wit deps
             wash {{command}}
             cd - > /dev/null
         fi

@@ -1,0 +1,83 @@
+name: Tests
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_components:
+    name: Build Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: "true"
+
+      - name: Install wash CLI
+        run: |
+          curl -s https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh | sudo bash
+          sudo apt install wash
+
+      - name: Build WebAssembly components
+        run: devbox run just wash-run-all build
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: "true"
+
+      - name: Check formatting
+        run: devbox run -- cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: devbox run -- cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: devbox run -- cargo test --workspace
+
+      - name: Run doc tests
+        run: devbox run -- cargo test --doc --workspace
+
+  # TODO: Check periodically locally and re-enable once it passes.
+  #       Alternatively, research if the audit can be run on our own code only,
+  #       excluding dependencies. Or only first-party dependencies and ignore
+  #       anything transient.
+  # security:
+  #   name: Security Audit
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Install devbox
+  #       uses: jetify-com/devbox-install-action@v0.12.0
+  #       with:
+  #         enable-cache: "true"
+
+  #     - name: Install cargo-audit
+  #       run: devbox run cargo install cargo-audit
+
+  #     - name: Run security audit
+  #       run: devbox run cargo audit
