@@ -32,11 +32,7 @@ impl Settings {
             .add_source(File::with_name(".env.local").required(false))
             .add_source(Environment::with_prefix("pipestack").separator("__"))
             .build()?;
-
         let settings: Settings = s.try_deserialize()?;
-
-        println!("{settings:?}");
-
         Ok(settings)
     }
 }

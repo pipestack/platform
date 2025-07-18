@@ -58,7 +58,7 @@ jobs:
 
       - name: Run tests
         run: |
-          cp ./crates/services/pipeline_manager/.env{.example, .local}.toml
+          cp ./crates/services/pipeline_manager/.env{.example,.local}.toml
           devbox run -- cargo test --workspace
 
   verify_tests_doc:
