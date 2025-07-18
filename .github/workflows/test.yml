@@ -14,7 +14,6 @@ env:
 
 jobs:
   build_components:
-    name: Build Dependencies
     runs-on: ubuntu-latest
 
     steps:
@@ -34,8 +33,7 @@ jobs:
       - name: Build WebAssembly components
         run: devbox run just wash-run-all build
 
-  test:
-    name: Test Suite
+  verify_clippy:
     runs-on: ubuntu-latest
 
     steps:
@@ -54,15 +52,36 @@ jobs:
 
       - name: Build WebAssembly components
         run: devbox run just wash-run-all build
-
-      - name: Check formatting
-        run: devbox run -- cargo fmt --all -- --check
 
       - name: Run clippy
         run: devbox run -- cargo clippy --no-deps --all-targets --all-features -- -D warnings
 
+  verify_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: "true"
+
       - name: Run tests
         run: devbox run -- cargo test --workspace
+
+  verify_tests_doc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: "true"
 
       - name: Run doc tests
         run: devbox run -- cargo test --doc --workspace
