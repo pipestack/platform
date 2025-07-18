@@ -5,15 +5,15 @@
     "libiconv":        "latest",
     "just":            "latest",
     "process-compose": "latest",
-    "openssl.dev": {
-      "platforms": ["x86_64-linux"]
-    },
     "openssl": {
       "version":   "latest",
       "platforms": ["x86_64-linux"]
     },
     "pkg-config": {
       "version":   "latest",
+      "platforms": ["x86_64-linux"]
+    },
+    "openssl.dev": {
       "platforms": ["x86_64-linux"]
     }
   },
