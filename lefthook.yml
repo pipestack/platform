@@ -1,0 +1,16 @@
+# EXAMPLE USAGE:
+#
+#   Refer for explanation to following link:
+#   https://lefthook.dev/configuration/
+#
+pre-commit:
+  parallel: true
+  jobs:
+    - name: cargo fmt
+      run: cargo fmt --all
+      glob: "*.rs"
+      
+    - name: cargo clippy
+      run: cargo clippy --fix -- -D warnings
+      glob: "*.rs"
+      stage_fixed: true

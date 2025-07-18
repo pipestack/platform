@@ -28,7 +28,8 @@
     "init_hook": [
       "[ \"$CI\" != \"true\" ] && cargo install wash --locked",
       "[ \"$CI\" != \"true\" ] && cargo install cargo-watch --locked",
-      "cargo fetch"
+      "cargo fetch",
+      "lefthook install"
     ],
     "scripts": {
       "services":            "process-compose",
