@@ -47,6 +47,14 @@ jobs:
         with:
           enable-cache: "true"
 
+      - name: Install wash CLI
+        run: |
+          curl -s https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh | sudo bash
+          sudo apt install wash
+
+      - name: Build WebAssembly components
+        run: devbox run just wash-run-all build
+
       - name: Check formatting
         run: devbox run -- cargo fmt --all -- --check
 
