@@ -9,7 +9,6 @@ impl Guest for Component {
         Ok(format!(
             "Received: {input}. Hello there from the nodes/customer stub"
         ))
-        // TODO: Send the input to the next atep in the pipeline based on configuration
     }
 }
 
