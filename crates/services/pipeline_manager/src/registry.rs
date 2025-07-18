@@ -12,7 +12,7 @@ pub async fn test_registry_connectivity(
         .timeout(std::time::Duration::from_secs(30))
         .connect_timeout(std::time::Duration::from_secs(10))
         .build()?;
-    let version_url = format!("{}/v2/", registry_url);
+    let version_url = format!("{registry_url}/v2/");
 
     info!("Testing registry connectivity at: {}", version_url);
 
@@ -20,7 +20,7 @@ pub async fn test_registry_connectivity(
         Ok(resp) => resp,
         Err(e) => {
             error!("Failed to connect to registry at {}: {}", registry_url, e);
-            return Err(format!("Registry connection failed: {}", e).into());
+            return Err(format!("Registry connection failed: {e}").into());
         }
     };
 
@@ -31,7 +31,7 @@ pub async fn test_registry_connectivity(
             .await
             .unwrap_or_else(|_| "Unable to read response".to_string());
         error!("Registry API v2 check failed: HTTP {} - {}", status, body);
-        return Err(format!("Registry API v2 not supported: HTTP {} - {}", status, body).into());
+        return Err(format!("Registry API v2 not supported: HTTP {status} - {body}").into());
     }
 
     info!("Registry connectivity test successful");
@@ -128,7 +128,7 @@ pub async fn publish_wasm_components(
         let tag = "1.0.0";
 
         // Create a temporary file for the WASM data
-        let temp_file = format!("/tmp/{}.wasm", node_id);
+        let temp_file = format!("/tmp/{node_id}.wasm");
         if let Err(e) = tokio::fs::write(&temp_file, &wasm_data).await {
             error!("Failed to write WASM data to temporary file: {}", e);
             failed_nodes.push(node_id.clone());
@@ -146,7 +146,7 @@ pub async fn publish_wasm_components(
                     .trim_start_matches("https://")
                     .trim_start_matches("http://")
                     .trim_end_matches('/');
-                format!("{}/{}", registry_without_protocol, image_name)
+                format!("{registry_without_protocol}/{image_name}")
             } else {
                 format!("{}/{}", &settings.registry.url, image_name)
             },
@@ -197,7 +197,7 @@ async fn fetch_wasm_from_r2(
     access_key: &str,
     secret_key: &str,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let r2_url = format!("{}/{}", r2_endpoint, key);
+    let r2_url = format!("{r2_endpoint}/{key}");
 
     info!("Fetching WASM component from R2: {}", r2_url);
 
@@ -218,17 +218,15 @@ async fn fetch_wasm_from_r2(
 
     // Create canonical request
     let canonical_headers = format!(
-        "host:{}\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:{}\n",
-        host, datetime
+        "host:{host}\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:{datetime}\n"
     );
     let signed_headers = "host;x-amz-content-sha256;x-amz-date";
     let canonical_request = format!(
-        "GET\n{}\n\n{}\n{}\nUNSIGNED-PAYLOAD",
-        path, canonical_headers, signed_headers
+        "GET\n{path}\n\n{canonical_headers}\n{signed_headers}\nUNSIGNED-PAYLOAD"
     );
 
     // Create string to sign
-    let credential_scope = format!("{}/{}/{}/aws4_request", date, region, service);
+    let credential_scope = format!("{date}/{region}/{service}/aws4_request");
     let string_to_sign = format!(
         "AWS4-HMAC-SHA256\n{}\n{}\n{:x}",
         datetime,
@@ -242,8 +240,7 @@ async fn fetch_wasm_from_r2(
 
     // Create authorization header
     let authorization = format!(
-        "AWS4-HMAC-SHA256 Credential={}/{}, SignedHeaders={}, Signature={}",
-        access_key, credential_scope, signed_headers, signature
+        "AWS4-HMAC-SHA256 Credential={access_key}/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}"
     );
 
     request = request
@@ -259,7 +256,7 @@ async fn fetch_wasm_from_r2(
             .text()
             .await
             .unwrap_or_else(|_| "Unable to read response body".to_string());
-        return Err(format!("Failed to fetch from R2: HTTP {} - {}", status, body).into());
+        return Err(format!("Failed to fetch from R2: HTTP {status} - {body}").into());
     }
 
     let wasm_data = response.bytes().await?;
@@ -274,7 +271,7 @@ fn get_signing_key(
     region: &str,
     service: &str,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let k_date = hmac_sha256(format!("AWS4{}", secret_key).as_bytes(), date.as_bytes());
+    let k_date = hmac_sha256(format!("AWS4{secret_key}").as_bytes(), date.as_bytes());
     let k_region = hmac_sha256(&k_date, region.as_bytes());
     let k_service = hmac_sha256(&k_region, service.as_bytes());
     let k_signing = hmac_sha256(&k_service, b"aws4_request");

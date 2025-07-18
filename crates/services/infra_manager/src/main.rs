@@ -494,7 +494,7 @@ impl InfraManager {
         service_id: &str,
         workspace_slug: &str,
     ) -> Result<()> {
-        let domain_name = format!("pipestack-{}.up.railway.app", workspace_slug);
+        let domain_name = format!("pipestack-{workspace_slug}.up.railway.app");
 
         let mutation = r#"
             mutation serviceDomainUpdate($input: ServiceDomainUpdateInput!) {

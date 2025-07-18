@@ -21,7 +21,7 @@ impl Guest for Component {
             log(
                 Level::Error,
                 "in-http",
-                format!("Failed to publish message: {:?}", err).as_str(),
+                format!("Failed to publish message: {err:?}").as_str(),
             );
         }
         log(

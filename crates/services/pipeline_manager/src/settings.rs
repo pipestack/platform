@@ -35,7 +35,7 @@ impl Settings {
 
         let settings: Settings = s.try_deserialize()?;
 
-        println!("{:?}", settings);
+        println!("{settings:?}");
 
         Ok(settings)
     }

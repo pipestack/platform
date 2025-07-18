@@ -566,7 +566,7 @@ pub fn convert_pipeline(
             component_type: "capability".to_string(),
             properties: Properties::WithApplication {
                 application: ApplicationRef {
-                    name: format!("{}-providers", workspace_slug),
+                    name: format!("{workspace_slug}-providers"),
                     component: "httpserver".to_string(),
                 },
             },
@@ -622,7 +622,7 @@ pub fn convert_pipeline(
                         )),
                         source: Some(LinkSource {
                             config: vec![Config {
-                                name: format!("subscription-{}-config", subscription_counter),
+                                name: format!("subscription-{subscription_counter}-config"),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -665,7 +665,7 @@ pub fn convert_pipeline(
                         )),
                         source: Some(LinkSource {
                             config: vec![Config {
-                                name: format!("subscription-{}-config", subscription_counter),
+                                name: format!("subscription-{subscription_counter}-config"),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -701,7 +701,7 @@ pub fn convert_pipeline(
         component_type: "capability".to_string(),
         properties: Properties::WithApplication {
             application: ApplicationRef {
-                name: format!("{}-providers", workspace_slug),
+                name: format!("{workspace_slug}-providers"),
                 component: "messaging-nats".to_string(),
             },
         },
@@ -731,12 +731,12 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
     );
     annotations.insert(
         "description".to_string(),
-        format!("Shared providers for the {} workspace", workspace_slug),
+        format!("Shared providers for the {workspace_slug} workspace"),
     );
     annotations.insert("version".to_string(), "0.1.0".to_string());
 
     let metadata = Metadata {
-        name: format!("{}-providers", workspace_slug),
+        name: format!("{workspace_slug}-providers"),
         annotations,
     };
 

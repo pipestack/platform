@@ -21,7 +21,7 @@ pub async fn deploy_pipeline_to_wasm_cloud(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeployResponse {
-                    result: format!("Error converting pipeline: {}", e),
+                    result: format!("Error converting pipeline: {e}"),
                 }),
             );
         }
@@ -35,7 +35,7 @@ pub async fn deploy_pipeline_to_wasm_cloud(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeployResponse {
-                    result: format!("Error serializing WADM config: {}", e),
+                    result: format!("Error serializing WADM config: {e}"),
                 }),
             );
         }
@@ -62,7 +62,7 @@ pub async fn deploy_pipeline_to_wasm_cloud(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeployResponse {
-                    result: format!("Error creating WADM client: {}", e),
+                    result: format!("Error creating WADM client: {e}"),
                 }),
             );
         }
@@ -100,7 +100,7 @@ pub async fn deploy_providers_to_wasm_cloud(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeployResponse {
-                    result: format!("Error serializing providers WADM config: {}", e),
+                    result: format!("Error serializing providers WADM config: {e}"),
                 }),
             );
         }
@@ -127,7 +127,7 @@ pub async fn deploy_providers_to_wasm_cloud(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeployResponse {
-                    result: format!("Error creating WADM client: {}", e),
+                    result: format!("Error creating WADM client: {e}"),
                 }),
             );
         }
@@ -153,7 +153,7 @@ pub async fn deploy_providers_to_wasm_cloud(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeployResponse {
-                    result: format!("Error deploying providers: {}", e),
+                    result: format!("Error deploying providers: {e}"),
                 }),
             )
         }

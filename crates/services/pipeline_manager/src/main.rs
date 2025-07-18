@@ -66,7 +66,7 @@ async fn deploy_pipeline(
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(DeployResponse {
-                result: format!("Failed to publish WASM components: {}", e),
+                result: format!("Failed to publish WASM components: {e}"),
             }),
         );
     }
