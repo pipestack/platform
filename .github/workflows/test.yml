@@ -57,7 +57,9 @@ jobs:
         run: devbox run just wash-run-all build
 
       - name: Run tests
-        run: devbox run -- cargo test --workspace
+        run: |
+          cp ./crates/services/pipeline_manager/.env{.example, .local}.toml
+          devbox run -- cargo test --workspace
 
   verify_tests_doc:
     runs-on: ubuntu-latest
