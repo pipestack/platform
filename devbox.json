@@ -13,9 +13,8 @@
       "version":   "latest",
       "platforms": ["x86_64-linux"]
     },
-    "openssl.dev": {
-      "platforms": ["x86_64-linux"]
-    }
+    "lefthook":    "latest",
+    "openssl.dev": ""
   },
   "env": {
     "WASMCLOUD_OBSERVABILITY_ENABLED": "true",

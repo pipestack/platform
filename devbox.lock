@@ -89,6 +89,54 @@
         }
       }
     },
+    "lefthook@latest": {
+      "last_modified": "2025-07-13T22:45:35Z",
+      "resolved": "github:NixOS/nixpkgs/a421ac6595024edcfbb1ef950a3712b89161c359#lefthook",
+      "source": "devbox-search",
+      "version": "1.11.15",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/2irf3ik9j41gk9gc6dz2dnqp2pkgvw8f-lefthook-1.11.15",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/2irf3ik9j41gk9gc6dz2dnqp2pkgvw8f-lefthook-1.11.15"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/zdr9kjbzday66r2awx37glrbnqhk8z0x-lefthook-1.11.15",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/zdr9kjbzday66r2awx37glrbnqhk8z0x-lefthook-1.11.15"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/3jjl86h1l9kq168wwa0r98557hc5wjaj-lefthook-1.11.15",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/3jjl86h1l9kq168wwa0r98557hc5wjaj-lefthook-1.11.15"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/n1lbb50m39c26jlzicbr7q89xymljqsr-lefthook-1.11.15",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/n1lbb50m39c26jlzicbr7q89xymljqsr-lefthook-1.11.15"
+        }
+      }
+    },
     "libiconv@latest": {
       "last_modified": "2025-07-13T22:45:35Z",
       "resolved": "github:NixOS/nixpkgs/a421ac6595024edcfbb1ef950a3712b89161c359#libiconv",
@@ -122,6 +170,21 @@
             }
           ],
           "store_path": "/nix/store/fl0j823q7w6y7ghlvj9s02qc0fy5c627-libiconv-109"
+        }
+      }
+    },
+    "openssl.dev": {
+      "resolved": "github:NixOS/nixpkgs/fa0ef8a6bb1651aa26c939aeb51b5f499e86b0ec?narHash=sha256-2Kp9St3Pbsmu%2BxMsobLcgzzUxPvZR7alVJWyuk2BAPc%3D#openssl.dev",
+      "source": "nixpkg",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "dev",
+              "path": "/nix/store/mcn0w4mcl6n1ksx3mqdg8fc30qsifxn7-openssl-3.5.1-dev",
+              "default": true
+            }
+          ]
         }
       }
     },
