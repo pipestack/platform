@@ -11,6 +11,6 @@ pre-commit:
       glob: "*.rs"
       
     - name: cargo clippy
-      run: cargo clippy --fix -- -D warnings
+      run: cargo clippy --fix --allow-dirty -- -D warnings
       glob: "*.rs"
       stage_fixed: true

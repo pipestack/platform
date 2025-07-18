@@ -1328,27 +1328,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "custom-component"
-version = "0.1.0"
-dependencies = [
- "wit-bindgen 0.43.0",
-]
-
-[[package]]
-name = "custom-component-links-only"
-version = "0.1.0"
-dependencies = [
- "wit-bindgen 0.43.0",
-]
-
-[[package]]
-name = "custom-component-links-only-multiple-versions"
-version = "0.1.0"
-dependencies = [
- "wit-bindgen 0.43.0",
-]
-
-[[package]]
 name = "customer"
 version = "0.1.0"
 dependencies = [
@@ -2192,10 +2171,6 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.12",
 ]
-
-[[package]]
-name = "hard-coded-wadm-no-custom-code"
-version = "0.1.0"
 
 [[package]]
 name = "hashbrown"
