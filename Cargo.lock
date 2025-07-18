@@ -4749,6 +4749,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust_custom_component"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen 0.43.0",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
