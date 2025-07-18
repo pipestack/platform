@@ -59,7 +59,7 @@ jobs:
         run: devbox run -- cargo fmt --all -- --check
 
       - name: Run clippy
-        run: devbox run -- cargo clippy --all-targets --all-features -- -D warnings
+        run: devbox run -- cargo clippy --no-deps --all-targets --all-features -- -D warnings
 
       - name: Run tests
         run: devbox run -- cargo test --workspace
