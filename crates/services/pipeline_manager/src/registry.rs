@@ -217,13 +217,11 @@ async fn fetch_wasm_from_r2(
     let service = "s3";
 
     // Create canonical request
-    let canonical_headers = format!(
-        "host:{host}\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:{datetime}\n"
-    );
+    let canonical_headers =
+        format!("host:{host}\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:{datetime}\n");
     let signed_headers = "host;x-amz-content-sha256;x-amz-date";
-    let canonical_request = format!(
-        "GET\n{path}\n\n{canonical_headers}\n{signed_headers}\nUNSIGNED-PAYLOAD"
-    );
+    let canonical_request =
+        format!("GET\n{path}\n\n{canonical_headers}\n{signed_headers}\nUNSIGNED-PAYLOAD");
 
     // Create string to sign
     let credential_scope = format!("{date}/{region}/{service}/aws4_request");
