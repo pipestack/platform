@@ -6,7 +6,6 @@ members = [
     "crates/nodes/*",
     "crates/schemas/*",
     "crates/services/*",
-    "examples/*",
 ]
 resolver = "3"
 
