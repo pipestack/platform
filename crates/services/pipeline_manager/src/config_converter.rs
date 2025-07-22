@@ -24,6 +24,27 @@ pub struct XYPosition {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
+pub struct InHttpWebhookSettings {
+    pub method: String,
+    #[serde(rename = "contentType", skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+    #[serde(
+        rename = "requestBodyJsonSchema",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub request_body_json_schema: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[serde(tag = "type", content = "settings")]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
+pub enum PipelineNodeSettings {
+    #[serde(rename = "in-http-webhook")]
+    InHttpWebhook(InHttpWebhookSettings),
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
 pub struct PipelineNode {
     pub name: String,
     #[serde(rename = "type")]
@@ -31,6 +52,8 @@ pub struct PipelineNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instances: Option<u32>,
     pub position: XYPosition,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings: Option<PipelineNodeSettings>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<Vec<String>>,
 }
@@ -205,6 +228,22 @@ pub struct LinkSource {
     pub config: Vec<Config>,
 }
 
+fn settings_to_config_properties<T: serde::Serialize>(
+    settings: &T,
+) -> BTreeMap<String, serde_yaml::Value> {
+    let settings_value = serde_json::to_value(settings).expect("Failed to serialize settings");
+
+    let mut props = BTreeMap::new();
+    if let serde_json::Value::Object(map) = settings_value {
+        for (key, value) in map {
+            let yaml_value = serde_yaml::to_value(value).expect("Failed to convert to YAML value");
+            props.insert(key, yaml_value);
+        }
+    }
+
+    props
+}
+
 pub fn convert_pipeline(
     pipeline: &Pipeline,
     workspace_slug: &String,
@@ -273,7 +312,12 @@ pub fn convert_pipeline(
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
                         image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
-                        config: None,
+                        config: step.settings.as_ref().map(|s| match s {
+                            PipelineNodeSettings::InHttpWebhook(settings) => vec![Config {
+                                name: format!("{}-config", step.name),
+                                properties: settings_to_config_properties(settings),
+                            }],
+                        }),
                     },
                     traits: vec![
                         Trait {

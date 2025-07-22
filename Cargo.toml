@@ -24,7 +24,7 @@ sha2 = "0.10"
 tokio = { version = "1.45.1", features = ["full"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
-ts-rs = "11.0.1"
+ts-rs = {version = "11.0.1", features = ["serde-json-impl"]}
 wadm-client = "0.10.0"
 wash = "0.42.1"
 wasmcloud-component = "0.2.0"
