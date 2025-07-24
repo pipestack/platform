@@ -2698,6 +2698,7 @@ dependencies = [
 name = "in-http"
 version = "0.1.0"
 dependencies = [
+ "shared",
  "wasmcloud-component",
  "wit-bindgen 0.43.0",
 ]
@@ -3985,6 +3986,7 @@ dependencies = [
  "pipeline_manager",
  "schemars 1.0.4",
  "serde_json",
+ "shared",
 ]
 
 [[package]]
@@ -3997,15 +3999,14 @@ dependencies = [
  "hex",
  "hmac",
  "reqwest",
- "schemars 1.0.4",
  "serde",
  "serde_json",
  "serde_yaml",
  "sha2",
+ "shared",
  "tokio",
  "tracing",
  "tracing-subscriber",
- "ts-rs",
  "wadm-client",
  "wash",
 ]
@@ -5334,6 +5335,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static 1.5.0",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "ts-rs",
 ]
 
 [[package]]

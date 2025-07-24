@@ -9,4 +9,4 @@ target/
 **/wit/deps/
 
 # Node.js / Typescript
-crates/services/pipeline_manager/bindings
+crates/shared/bindings

@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
+use shared::Pipeline;
 use tokio::net::TcpListener;
 
 mod config_converter;
@@ -14,7 +15,6 @@ mod registry;
 mod settings;
 mod wadm;
 
-use crate::config_converter::Pipeline;
 use settings::Settings;
 
 #[derive(Clone)]

@@ -1,136 +1,8 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use shared::{Pipeline, PipelineNodeSettings, PipelineNodeType};
 use std::collections::{BTreeMap, HashMap};
-use ts_rs::TS;
 
 use crate::settings::Settings;
-
-const PIPELINE_TS_FILE_PATH: &str = "./pipeline.ts";
-
-#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
-#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
-pub struct Pipeline {
-    pub name: String,
-    pub version: String,
-    pub nodes: Vec<PipelineNode>,
-}
-
-#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
-#[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
-pub struct XYPosition {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
-#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
-pub struct InHttpWebhookSettings {
-    pub method: String,
-    #[serde(rename = "contentType", skip_serializing_if = "Option::is_none")]
-    pub content_type: Option<String>,
-    #[serde(
-        rename = "requestBodyJsonSchema",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub request_body_json_schema: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
-#[serde(tag = "type", content = "settings")]
-#[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
-pub enum PipelineNodeSettings {
-    #[serde(rename = "in-http-webhook")]
-    InHttpWebhook(InHttpWebhookSettings),
-}
-
-#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
-#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
-pub struct PipelineNode {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub step_type: PipelineNodeType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub instances: Option<u32>,
-    pub position: XYPosition,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub settings: Option<PipelineNodeSettings>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub depends_on: Option<Vec<String>>,
-}
-
-#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
-#[serde(rename_all = "kebab-case")]
-#[ts(export, rename = "NodeType", export_to = PIPELINE_TS_FILE_PATH)]
-pub enum PipelineNodeType {
-    // ####################
-    // Sources
-    // ####################
-    //
-    // Cloud Storages
-    InAwsS3,
-    InGoogleGcs,
-    InAzureBlob,
-    // Databases
-    InPostgresql,
-    InMongodb,
-    InMysql,
-    InSqlite,
-    // Streaming
-    InKafka,
-    InNats,
-    InRabbitmq,
-    InRedis,
-    // Web / API
-    InHttpWebhook,
-    InHttpPoller,
-    InGraphqlPoller,
-    InRssReader,
-    // Cloud Services
-    InGooglePubsub,
-    InAwsKinesis,
-    InStripe,
-    InGithubWebhook,
-    // ####################
-    // Processor nodes
-    // ####################
-    //
-    // Custom
-    ProcessorWasm,
-    // ####################
-    // Sink nodes
-    // ####################
-    //
-    // Databases
-    OutPostgresql,
-    OutMongodb,
-    OutMysql,
-    OutRedis,
-    // Cloud Storages
-    OutAwsS3,
-    OutGoogleGcs,
-    OutAzureBlob,
-    // Streaming / Queues
-    OutKafka,
-    OutNats,
-    OutRabbitmq,
-    OutGooglePubsub,
-    // Web / API
-    OutHttpPost,
-    OutGraphqlMutation,
-    OutSlack,
-    OutTwilioSms,
-    OutWebhook,
-    // Observability
-    OutPrometheus,
-    OutLoki,
-    OutElasticsearch,
-    OutInfluxdb,
-    // Cloud Integrations
-    OutGoogleBigquery,
-    OutSnowflake,
-    OutAwsLambda,
-    OutLog,
-}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WadmApplication {
@@ -166,6 +38,7 @@ pub struct Component {
 #[serde(untagged)]
 pub enum Properties {
     WithImage {
+        id: String,
         image: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         config: Option<Vec<Config>>,
@@ -311,10 +184,11 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
-                        image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
+                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
+                        image: format!("{}/pipestack/in-http:0.0.2", settings.registry.url),
                         config: step.settings.as_ref().map(|s| match s {
                             PipelineNodeSettings::InHttpWebhook(settings) => vec![Config {
-                                name: format!("{}-config", step.name),
+                                name: format!("{}-config-v{}", step.name, pipeline.version),
                                 properties: settings_to_config_properties(settings),
                             }],
                         }),
@@ -361,12 +235,19 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties::WithImage {
+                            id: format!(
+                                "{}_{}-out-internal-for-{}",
+                                workspace_slug, pipeline.name, step.name
+                            ),
                             image: format!(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
                             ),
                             config: Some(vec![Config {
-                                name: format!("out-internal-for-{}-config", step.name),
+                                name: format!(
+                                    "out-internal-for-{}-config-v{}",
+                                    step.name, pipeline.version
+                                ),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -406,6 +287,10 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
+                        id: format!(
+                            "{}_{}-in-internal-for-{}",
+                            workspace_slug, pipeline.name, step.name
+                        ),
                         image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
                         config: None,
                     },
@@ -450,6 +335,7 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
+                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
                         image: format!(
                             "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
                             settings.registry.url,
@@ -486,12 +372,19 @@ pub fn convert_pipeline(
                         name: format!("out-internal-for-{}", step.name),
                         component_type: "component".to_string(),
                         properties: Properties::WithImage {
+                            id: format!(
+                                "{}_{}-out-internal-for-{}",
+                                workspace_slug, pipeline.name, step.name
+                            ),
                             image: format!(
                                 "{}/pipestack/out-internal:0.0.1",
                                 settings.registry.url
                             ),
                             config: Some(vec![Config {
-                                name: format!("out-internal-for-{}-config", step.name),
+                                name: format!(
+                                    "out-internal-for-{}-config-v{}",
+                                    step.name, pipeline.version
+                                ),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -531,6 +424,10 @@ pub fn convert_pipeline(
                     name: format!("in-internal-for-{}", step.name),
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
+                        id: format!(
+                            "{}_{}-in-internal-for-{}",
+                            workspace_slug, pipeline.name, step.name
+                        ),
                         image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
                         config: None,
                     },
@@ -575,6 +472,7 @@ pub fn convert_pipeline(
                     name: step.name.clone(),
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
+                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
                         image: format!("{}/pipestack/out-log:0.0.1", settings.registry.url),
                         config: None,
                     },
@@ -624,8 +522,8 @@ pub fn convert_pipeline(
                     source: Some(LinkSource {
                         config: vec![Config {
                             name: format!(
-                                "{}-{}-httpserver-path-config",
-                                workspace_slug, pipeline.name
+                                "{}-{}-httpserver-path-config-v{}",
+                                workspace_slug, pipeline.name, pipeline.version
                             ),
                             properties: {
                                 let mut props = BTreeMap::new();
@@ -666,7 +564,10 @@ pub fn convert_pipeline(
                         )),
                         source: Some(LinkSource {
                             config: vec![Config {
-                                name: format!("subscription-{subscription_counter}-config"),
+                                name: format!(
+                                    "subscription-{subscription_counter}-config-v{}",
+                                    pipeline.version
+                                ),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -709,7 +610,10 @@ pub fn convert_pipeline(
                         )),
                         source: Some(LinkSource {
                             config: vec![Config {
-                                name: format!("subscription-{subscription_counter}-config"),
+                                name: format!(
+                                    "subscription-{subscription_counter}-config-v{}",
+                                    pipeline.version
+                                ),
                                 properties: {
                                     let mut props = BTreeMap::new();
                                     props.insert(
@@ -801,6 +705,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
     };
 
     let http_properties = Properties::WithImage {
+        id: "httpserver".to_string(),
         image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
         config: Some(vec![http_config]),
     };
@@ -819,6 +724,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
 
     // Messaging NATS component
     let nats_properties = Properties::WithImage {
+        id: "messaging-nats".to_string(),
         image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
         config: Some(vec![Config {
             name: "messaging-nats-config".to_string(),
@@ -919,7 +825,7 @@ spec:
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-in-http-webhook_17-config
+      - name: out-internal-for-in-http-webhook_17-config-v1
         properties:
           next-step-topic: default-mine-step-2-in
     traits:
@@ -971,7 +877,7 @@ spec:
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-processor-wasm_18-config
+      - name: out-internal-for-processor-wasm_18-config-v1
         properties:
           next-step-topic: default-mine-step-3-in
     traits:
@@ -1033,7 +939,7 @@ spec:
         - incoming-handler
         source:
           config:
-          - name: default-mine-httpserver-path-config
+          - name: default-mine-httpserver-path-config-v1
             properties:
               path: /mine
         target:
@@ -1054,7 +960,7 @@ spec:
         - handler
         source:
           config:
-          - name: subscription-1-config
+          - name: subscription-1-config-v1
             properties:
               subscriptions: default-mine-step-2-in
               cluster_uris: localhost:4222
@@ -1069,7 +975,7 @@ spec:
         - handler
         source:
           config:
-          - name: subscription-2-config
+          - name: subscription-2-config-v1
             properties:
               subscriptions: default-mine-step-3-in
               cluster_uris: localhost:4222
@@ -1161,7 +1067,7 @@ spec:
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-in-http-webhook_17-config
+      - name: out-internal-for-in-http-webhook_17-config-v1
         properties:
           next-step-topic: default-mine-step-2-in
     traits:
@@ -1213,7 +1119,7 @@ spec:
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
       config:
-      - name: out-internal-for-processor-wasm_18-config
+      - name: out-internal-for-processor-wasm_18-config-v1
         properties:
           next-step-topic: default-mine-step-3-in
     traits:
@@ -1307,7 +1213,7 @@ spec:
         - incoming-handler
         source:
           config:
-          - name: default-mine-httpserver-path-config
+          - name: default-mine-httpserver-path-config-v1
             properties:
               path: /mine
         target:
@@ -1328,7 +1234,7 @@ spec:
         - handler
         source:
           config:
-          - name: subscription-1-config
+          - name: subscription-1-config-v1
             properties:
               subscriptions: default-mine-step-2-in
               cluster_uris: localhost:4222
@@ -1343,7 +1249,7 @@ spec:
         - handler
         source:
           config:
-          - name: subscription-2-config
+          - name: subscription-2-config-v1
             properties:
               subscriptions: default-mine-step-3-in
               cluster_uris: localhost:4222
@@ -1358,7 +1264,7 @@ spec:
         - handler
         source:
           config:
-          - name: subscription-3-config
+          - name: subscription-3-config-v1
             properties:
               subscriptions: default-mine-step-3-in
               cluster_uris: localhost:4222

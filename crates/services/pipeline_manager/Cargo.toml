@@ -10,14 +10,13 @@ config.workspace = true
 hex.workspace = true
 hmac.workspace = true
 reqwest.workspace = true
-schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 sha2.workspace = true
+shared = { path = "../../shared" }
 tokio.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-ts-rs.workspace = true
 wadm-client.workspace = true
 wash.workspace = true

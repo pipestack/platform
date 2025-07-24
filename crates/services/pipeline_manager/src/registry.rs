@@ -1,7 +1,7 @@
-use crate::config_converter::PipelineNodeType;
 use crate::{DeployRequest, settings::Settings};
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
+use shared::PipelineNodeType;
 use tracing::{error, info};
 use wash::lib::registry::{OciPushOptions, push_oci_artifact};
 

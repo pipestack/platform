@@ -5,7 +5,7 @@ incremental = true
 members = [
     "crates/nodes/*",
     "crates/schemas/*",
-    "crates/services/*",
+    "crates/services/*", "crates/shared",
 ]
 resolver = "3"
 

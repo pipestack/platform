@@ -1,5 +1,5 @@
-use pipeline_manager::config_converter::Pipeline;
 use schemars::generate::SchemaSettings;
+use shared::Pipeline;
 
 fn main() {
     let generator = SchemaSettings::draft07().into_generator();
