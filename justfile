@@ -56,6 +56,11 @@ wash-up lattice="default":
 
 wash-down:
     wash down --purge-jetstream all --all
+    wash drain all
+
+wash-restart:
+    just wash-down
+    just wash-up
 
 wash-logs:
     tail -f ~/.wash/downloads/wasmcloud.log
