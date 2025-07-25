@@ -185,7 +185,7 @@ pub fn convert_pipeline(
                     component_type: "component".to_string(),
                     properties: Properties::WithImage {
                         id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
-                        image: format!("{}/pipestack/in-http:0.0.2", settings.registry.url),
+                        image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
                         config: step.settings.as_ref().map(|s| match s {
                             PipelineNodeSettings::InHttpWebhook(settings) => vec![Config {
                                 name: format!("{}-config-v{}", step.name, pipeline.version),
@@ -808,6 +808,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/in-http:0.0.1
+      id: default_mine-in-http-webhook_17
     traits:
     - type: spreadscaler
       properties:
@@ -824,6 +825,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
+      id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
         properties:
@@ -844,6 +846,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/in-internal:0.0.1
+      id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
       properties:
@@ -868,6 +871,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/default/pipeline/mine/1/builder/components/nodes/processor/wasm/processor-wasm_18:1.0.0
+      id: default_mine-processor-wasm_18
     traits:
     - type: spreadscaler
       properties:
@@ -876,6 +880,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
+      id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
         properties:
@@ -896,6 +901,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/in-internal:0.0.1
+      id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
       properties:
@@ -920,6 +926,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/out-log:0.0.1
+      id: default_mine-out-log_19
     traits:
     - type: spreadscaler
       properties:
@@ -1050,6 +1057,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/in-http:0.0.1
+      id: default_mine-in-http-webhook_17
     traits:
     - type: spreadscaler
       properties:
@@ -1066,6 +1074,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
+      id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
         properties:
@@ -1086,6 +1095,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/in-internal:0.0.1
+      id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
       properties:
@@ -1110,6 +1120,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/default/pipeline/mine/1/builder/components/nodes/processor/wasm/processor-wasm_18:1.0.0
+      id: default_mine-processor-wasm_18
     traits:
     - type: spreadscaler
       properties:
@@ -1118,6 +1129,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/out-internal:0.0.1
+      id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
         properties:
@@ -1138,6 +1150,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/in-internal:0.0.1
+      id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
       properties:
@@ -1162,6 +1175,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/out-log:0.0.1
+      id: default_mine-out-log_19
     traits:
     - type: spreadscaler
       properties:
@@ -1170,6 +1184,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/in-internal:0.0.1
+      id: default_mine-in-internal-for-out-log_20
     traits:
     - type: spreadscaler
       properties:
@@ -1194,6 +1209,7 @@ spec:
     type: component
     properties:
       image: http://localhost:5000/pipestack/out-log:0.0.1
+      id: default_mine-out-log_20
     traits:
     - type: spreadscaler
       properties:
