@@ -807,7 +807,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
         "description".to_string(),
         format!("Shared providers for the {workspace_slug} workspace"),
     );
-    annotations.insert("version".to_string(), "0.1.0".to_string());
+    annotations.insert("version".to_string(), "0.2.0".to_string());
 
     let metadata = Metadata {
         name: format!("{workspace_slug}-providers"),
