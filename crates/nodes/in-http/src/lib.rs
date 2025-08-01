@@ -14,7 +14,7 @@ impl http::Server for Component {
     fn handle(
         request: http::IncomingRequest,
     ) -> http::Result<http::Response<impl http::OutgoingBody>> {
-        let config = match wasi::config::runtime::get_all() {
+        let config = match wasi::config::runtime::get("json") {
             Ok(config) => config,
             Err(e) => {
                 log(

@@ -114,7 +114,19 @@ fn settings_to_config_properties<T: serde::Serialize>(
         }
     }
 
-    props
+    // Convert props to JSON string
+    let json_string = match serde_json::to_string(&props) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Failed to serialize properties to JSON: {e}");
+            return BTreeMap::new();
+        }
+    };
+
+    // Parse back to serde_yaml::Value to return as JSON string value
+    let mut result = BTreeMap::new();
+    result.insert("json".to_string(), serde_yaml::Value::String(json_string));
+    result
 }
 
 pub fn convert_pipeline(
@@ -191,6 +203,7 @@ pub fn convert_pipeline(
                                 name: format!("{}-config-v{}", step.name, pipeline.version),
                                 properties: settings_to_config_properties(settings),
                             }],
+                            _ => vec![],
                         }),
                     },
                     traits: vec![
@@ -484,13 +497,104 @@ pub fn convert_pipeline(
                     }],
                 });
             }
+            PipelineNodeType::OutHttpWebhook => {
+                // Add in-internal component for out-http-webhook
+                components.push(Component {
+                    name: format!("in-internal-for-{}", step.name),
+                    component_type: "component".to_string(),
+                    properties: Properties::WithImage {
+                        id: format!(
+                            "{}_{}-in-internal-for-{}",
+                            workspace_slug, pipeline.name, step.name
+                        ),
+                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
+                        config: None,
+                    },
+                    traits: vec![
+                        Trait {
+                            trait_type: "spreadscaler".to_string(),
+                            properties: TraitProperties::Spreadscaler { instances: 1 },
+                        },
+                        Trait {
+                            trait_type: "link".to_string(),
+                            properties: TraitProperties::Link(LinkProperties {
+                                name: None,
+                                source: None,
+                                target: LinkTarget {
+                                    name: "messaging-nats".to_string(),
+                                    config: None,
+                                },
+                                namespace: "wasmcloud".to_string(),
+                                package: "messaging".to_string(),
+                                interfaces: vec!["consumer".to_string()],
+                            }),
+                        },
+                        Trait {
+                            trait_type: "link".to_string(),
+                            properties: TraitProperties::Link(LinkProperties {
+                                name: None,
+                                source: None,
+                                target: LinkTarget {
+                                    name: step.name.clone(),
+                                    config: None,
+                                },
+                                namespace: "pipestack".to_string(),
+                                package: "out".to_string(),
+                                interfaces: vec!["out".to_string()],
+                            }),
+                        },
+                    ],
+                });
+
+                // Add the out-http-webhook component itself
+                components.push(Component {
+                    name: step.name.clone(),
+                    component_type: "component".to_string(),
+                    properties: Properties::WithImage {
+                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
+                        image: format!(
+                            "{}/pipestack/out-http-webhook:0.0.1",
+                            settings.registry.url
+                        ),
+                        config: step.settings.as_ref().map(|s| match s {
+                            PipelineNodeSettings::OutHttpWebhook(settings) => vec![Config {
+                                name: format!("{}-config-v{}", step.name, pipeline.version),
+                                properties: settings_to_config_properties(settings),
+                            }],
+                            _ => vec![],
+                        }),
+                    },
+                    traits: vec![
+                        Trait {
+                            trait_type: "spreadscaler".to_string(),
+                            properties: TraitProperties::Spreadscaler {
+                                instances: step.instances.unwrap_or(1),
+                            },
+                        },
+                        Trait {
+                            trait_type: "link".to_string(),
+                            properties: TraitProperties::Link(LinkProperties {
+                                name: None,
+                                source: None,
+                                target: LinkTarget {
+                                    name: "httpclient".to_string(),
+                                    config: None,
+                                },
+                                namespace: "wasi".to_string(),
+                                package: "http".to_string(),
+                                interfaces: vec!["outgoing-handler".to_string()],
+                            }),
+                        },
+                    ],
+                });
+            }
             _ => {
                 // Handle other step types as needed
             }
         }
     }
 
-    // Add capabilities (httpserver and messaging-nats)
+    // Add capabilities (httpserver, httpclient and messaging-nats)
     // HTTP Server capability
     if pipeline
         .nodes
@@ -547,6 +651,25 @@ pub fn convert_pipeline(
         });
     }
 
+    // HTTP Client capability
+    if pipeline
+        .nodes
+        .iter()
+        .any(|s| matches!(s.step_type, PipelineNodeType::OutHttpWebhook))
+    {
+        components.push(Component {
+            name: "httpclient".to_string(),
+            component_type: "capability".to_string(),
+            properties: Properties::WithApplication {
+                application: ApplicationRef {
+                    name: format!("{workspace_slug}-providers"),
+                    component: "httpclient".to_string(),
+                },
+            },
+            traits: vec![],
+        });
+    }
+
     // NATS messaging capability
     let mut nats_traits = vec![];
 
@@ -599,7 +722,10 @@ pub fn convert_pipeline(
     }
 
     for step in &pipeline.nodes {
-        if matches!(step.step_type, PipelineNodeType::OutLog) {
+        if matches!(
+            step.step_type,
+            PipelineNodeType::OutLog | PipelineNodeType::OutHttpWebhook
+        ) {
             if let Some(topic) = step_topics.get(&step.name) {
                 nats_traits.push(Trait {
                     trait_type: "link".to_string(),
@@ -689,37 +815,51 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
     };
 
     // HTTP Server component
-    let mut http_config_props = BTreeMap::new();
-    http_config_props.insert(
+    let mut http_server_config_props = BTreeMap::new();
+    http_server_config_props.insert(
         "routing_mode".to_string(),
         serde_yaml::Value::String("path".to_string()),
     );
-    http_config_props.insert(
+    http_server_config_props.insert(
         "address".to_string(),
         serde_yaml::Value::String("0.0.0.0:8000".to_string()),
     );
 
-    let http_config = Config {
+    let http_server_config = Config {
         name: "default-http-config".to_string(),
-        properties: http_config_props,
+        properties: http_server_config_props,
     };
 
-    let http_properties = Properties::WithImage {
+    let http_server_properties = Properties::WithImage {
         id: "httpserver".to_string(),
         image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
-        config: Some(vec![http_config]),
+        config: Some(vec![http_server_config]),
     };
 
-    let http_trait = Trait {
+    let http_server_trait = Trait {
         trait_type: "spreadscaler".to_string(),
         properties: TraitProperties::Spreadscaler { instances: 1 },
     };
 
-    let http_component = Component {
+    let http_server_component = Component {
         name: "httpserver".to_string(),
         component_type: "capability".to_string(),
-        properties: http_properties,
-        traits: vec![http_trait],
+        properties: http_server_properties,
+        traits: vec![http_server_trait],
+    };
+
+    // HTTP Client component
+    let http_client_properties = Properties::WithImage {
+        id: "httpclient".to_string(),
+        image: "ghcr.io/wasmcloud/http-client:0.13.1".to_string(),
+        config: None,
+    };
+
+    let http_client_component = Component {
+        name: "httpclient".to_string(),
+        component_type: "capability".to_string(),
+        properties: http_client_properties,
+        traits: vec![],
     };
 
     // Messaging NATS component
@@ -752,7 +892,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
     };
 
     let spec = Spec {
-        components: vec![http_component, nats_component],
+        components: vec![http_server_component, http_client_component, nats_component],
     };
 
     WadmApplication {

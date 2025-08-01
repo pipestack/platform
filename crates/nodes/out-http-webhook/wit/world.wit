@@ -1,0 +1,12 @@
+package pipestack:out@0.1.0;
+
+interface out {
+    run: func(input: string) -> string;
+}
+
+world component {
+    import wasi:config/runtime@0.2.0-draft;
+    import wasi:http/outgoing-handler@0.2.0;
+
+    export out;
+}

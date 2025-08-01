@@ -1,12 +1,15 @@
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{
+    Deserialize, Serialize,
+    de::{DeserializeOwned, Error},
+};
 use ts_rs::TS;
 
 const PIPELINE_TS_FILE_PATH: &str = "./pipeline.ts";
 
 #[derive(Debug)]
 pub enum ConfigError {
-    DeserializationError(serde_yaml::Error),
+    DeserializationError(serde_json::Error),
 }
 
 impl std::fmt::Display for ConfigError {
@@ -20,22 +23,15 @@ impl std::fmt::Display for ConfigError {
 }
 
 pub trait FromConfig: DeserializeOwned {
-    fn from_config(config: Vec<(String, String)>) -> Result<Self, ConfigError> {
-        let mut yaml_map = serde_yaml::Mapping::new();
-
-        for (key, value) in config {
-            let yaml_key = serde_yaml::Value::String(key);
-
-            let yaml_value = match serde_yaml::from_str::<serde_yaml::Value>(&value) {
-                Ok(parsed) => parsed,
-                Err(_) => serde_yaml::Value::String(value),
-            };
-
-            yaml_map.insert(yaml_key, yaml_value);
+    fn from_config(config: Option<String>) -> Result<Self, ConfigError> {
+        match config {
+            Some(config_str) => {
+                serde_json::from_str(&config_str).map_err(ConfigError::DeserializationError)
+            }
+            None => Err(ConfigError::DeserializationError(
+                serde_json::Error::custom("No configuration provided"),
+            )),
         }
-
-        let yaml_mapping = serde_yaml::Value::Mapping(yaml_map);
-        serde_yaml::from_value(yaml_mapping).map_err(ConfigError::DeserializationError)
     }
 }
 
@@ -69,11 +65,60 @@ pub struct InHttpWebhookSettings {
 impl FromConfig for InHttpWebhookSettings {}
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
+pub struct HttpHeader {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
+pub struct AuthenticationConfig {
+    pub location: String,
+    pub name: String,
+    pub value: String,
+    pub prefix: String,
+    pub realm: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
+pub struct Authentication {
+    #[serde(rename = "type")]
+    pub auth_type: String,
+    pub config: AuthenticationConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
+pub struct Validation {
+    pub timeout: u16,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
+pub struct OutHttpWebhookSettings {
+    pub method: String,
+    pub url: String,
+    #[serde(rename = "contentType", skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<Vec<HttpHeader>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication: Option<Authentication>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validation: Option<Validation>,
+}
+impl FromConfig for OutHttpWebhookSettings {}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[serde(tag = "type", content = "settings")]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
 pub enum PipelineNodeSettings {
     #[serde(rename = "in-http-webhook")]
     InHttpWebhook(InHttpWebhookSettings),
+    #[serde(rename = "out-http-webhook")]
+    OutHttpWebhook(OutHttpWebhookSettings),
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
@@ -148,11 +193,10 @@ pub enum PipelineNodeType {
     OutRabbitmq,
     OutGooglePubsub,
     // Web / API
-    OutHttpPost,
     OutGraphqlMutation,
     OutSlack,
     OutTwilioSms,
-    OutWebhook,
+    OutHttpWebhook,
     // Observability
     OutPrometheus,
     OutLoki,

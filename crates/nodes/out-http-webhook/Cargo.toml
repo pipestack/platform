@@ -1,0 +1,13 @@
+[package]
+name = "out-http-webhook"
+edition = "2021"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+serde_json.workspace = true
+shared = { path = "../../shared" }
+wasmcloud-component.workspace = true
+wit-bindgen.workspace = true
