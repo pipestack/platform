@@ -6,12 +6,25 @@ processes:
       namespace: dev
       working_dir: crates/services/pipeline_manager
       command: |
-        wash app delete default-providers
-        wash app deploy ../../../config/dev/local-providers.yaml
         cargo watch -w . -x "run"
       environment:
         - "RUST_LOG=debug"
       is_tty: true
+      readiness_probe:
+        http_get:
+          host: localhost
+          scheme: http
+          path: "/health"
+          port: 3000
+  dev_deploy_default_providers:
+    namespace: dev
+    command: |
+        wash app delete default-providers
+        curl -X POST http://localhost:3000/deploy-providers -H "Content-Type: application/json" -d '{ "workspaceSlug": "default" }'
+    is_tty: true
+    depends_on:
+      dev_services_pipeline_manager:
+        condition: process_healthy
   dev_wash_logs:
     namespace: dev
     command: |
