@@ -14,7 +14,7 @@ env:
 
 jobs:
   verify_clippy:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Checkout code
@@ -37,7 +37,7 @@ jobs:
         run: devbox run -- cargo clippy --no-deps --all-targets --all-features -- -D warnings
 
   verify_tests:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Checkout code
@@ -62,7 +62,7 @@ jobs:
           devbox run -- cargo test --workspace
 
   verify_tests_doc:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Checkout code
