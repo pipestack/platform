@@ -184,7 +184,7 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
     }
 
     // Perform the HTTP request
-    let _dog_picture_url = match wasi::http::outgoing_handler::handle(req, None) {
+    let _ = match wasi::http::outgoing_handler::handle(req, None) {
         Ok(resp) => {
             resp.subscribe().block();
             let response = resp
@@ -201,16 +201,11 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
                     .expect("failed to get response body stream");
 
                 let mut body_content = Vec::new();
-                loop {
-                    match input_stream.read(1024) {
-                        Ok(chunk) => {
-                            if chunk.is_empty() {
-                                break;
-                            }
-                            body_content.extend_from_slice(&chunk);
-                        }
-                        Err(_) => break,
+                while let Ok(chunk) = input_stream.read(1024) {
+                    if chunk.is_empty() {
+                        break;
                     }
+                    body_content.extend_from_slice(&chunk);
                 }
 
                 let body_string = String::from_utf8_lossy(&body_content);
