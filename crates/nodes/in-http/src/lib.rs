@@ -3,7 +3,7 @@ wit_bindgen::generate!({ generate_all });
 use shared::{FromConfig, InHttpWebhookSettings};
 use wasmcloud_component::{
     http::{self, ErrorCode, Response, StatusCode},
-    wasi::logging::logging::{log, Level},
+    wasi::logging::logging::{Level, log},
 };
 
 struct Component;

@@ -1,6 +1,6 @@
 use crate::exports::pipestack::out::out::Guest;
 
-use wasi::logging::logging::{log, Level};
+use wasi::logging::logging::{Level, log};
 use wasmcloud::messaging::{consumer, types};
 
 wit_bindgen::generate!({ generate_all });

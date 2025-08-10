@@ -122,18 +122,19 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
     };
 
     // Handle API key authentication in query string
-    if let Some(auth) = &settings.authentication {
-        if auth.auth_type == "api_key" && auth.config.location == "query" {
-            let separator = if path_with_query.contains('?') {
-                "&"
-            } else {
-                "?"
-            };
-            path_with_query = format!(
-                "{}{}{}={}",
-                path_with_query, separator, auth.config.name, auth.config.value
-            );
-        }
+    if let Some(auth) = &settings.authentication
+        && auth.auth_type == "api_key"
+        && auth.config.location == "query"
+    {
+        let separator = if path_with_query.contains('?') {
+            "&"
+        } else {
+            "?"
+        };
+        path_with_query = format!(
+            "{}{}{}={}",
+            path_with_query, separator, auth.config.name, auth.config.value
+        );
     }
 
     // Set Content-Type header for methods that will have a body
