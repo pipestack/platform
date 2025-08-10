@@ -153,23 +153,24 @@ pub fn convert_pipeline(
     while changed {
         changed = false;
         for step in &pipeline.nodes {
-            if let Some(depends_on) = &step.depends_on {
-                if !depends_on.is_empty() && !node_depths.contains_key(&step.name) {
-                    // Check if all dependencies have been processed
-                    let mut max_depth = 0;
-                    let mut all_deps_processed = true;
-                    for dep in depends_on {
-                        if let Some(&depth) = node_depths.get(dep) {
-                            max_depth = max_depth.max(depth);
-                        } else {
-                            all_deps_processed = false;
-                            break;
-                        }
+            if let Some(depends_on) = &step.depends_on
+                && !depends_on.is_empty()
+                && !node_depths.contains_key(&step.name)
+            {
+                // Check if all dependencies have been processed
+                let mut max_depth = 0;
+                let mut all_deps_processed = true;
+                for dep in depends_on {
+                    if let Some(&depth) = node_depths.get(dep) {
+                        max_depth = max_depth.max(depth);
+                    } else {
+                        all_deps_processed = false;
+                        break;
                     }
-                    if all_deps_processed {
-                        node_depths.insert(step.name.clone(), max_depth + 1);
-                        changed = true;
-                    }
+                }
+                if all_deps_processed {
+                    node_depths.insert(step.name.clone(), max_depth + 1);
+                    changed = true;
                 }
             }
         }
@@ -177,13 +178,12 @@ pub fn convert_pipeline(
 
     // Generate topics for nodes that have dependencies
     for step in &pipeline.nodes {
-        if let Some(depends_on) = &step.depends_on {
-            if !depends_on.is_empty() {
-                if let Some(&depth) = node_depths.get(&step.name) {
-                    let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
-                    step_topics.insert(step.name.clone(), topic);
-                }
-            }
+        if let Some(depends_on) = &step.depends_on
+            && !depends_on.is_empty()
+            && let Some(&depth) = node_depths.get(&step.name)
+        {
+            let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
+            step_topics.insert(step.name.clone(), topic);
         }
     }
 
@@ -676,48 +676,48 @@ pub fn convert_pipeline(
     // Add messaging-nats links
     let mut subscription_counter = 1;
     for step in &pipeline.nodes {
-        if matches!(step.step_type, PipelineNodeType::ProcessorWasm) {
-            if let Some(topic) = step_topics.get(&step.name) {
-                nats_traits.push(Trait {
-                    trait_type: "link".to_string(),
-                    properties: TraitProperties::Link(LinkProperties {
-                        name: Some(format!(
-                            "messaging-nats-to-{}-in-internal-for-{}-link",
-                            workspace_slug, step.name
-                        )),
-                        source: Some(LinkSource {
-                            config: vec![Config {
-                                name: format!(
-                                    "subscription-{subscription_counter}-config-v{}",
-                                    pipeline.version
-                                ),
-                                properties: {
-                                    let mut props = BTreeMap::new();
-                                    props.insert(
-                                        "subscriptions".to_string(),
-                                        serde_yaml::Value::String(topic.clone()),
-                                    );
-                                    props.insert(
-                                        "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(
-                                            settings.nats.cluster_uris.to_string(),
-                                        ),
-                                    );
-                                    props
-                                },
-                            }],
-                        }),
-                        target: LinkTarget {
-                            name: format!("in-internal-for-{}", step.name),
-                            config: None,
-                        },
-                        namespace: "wasmcloud".to_string(),
-                        package: "messaging".to_string(),
-                        interfaces: vec!["handler".to_string()],
+        if matches!(step.step_type, PipelineNodeType::ProcessorWasm)
+            && let Some(topic) = step_topics.get(&step.name)
+        {
+            nats_traits.push(Trait {
+                trait_type: "link".to_string(),
+                properties: TraitProperties::Link(LinkProperties {
+                    name: Some(format!(
+                        "messaging-nats-to-{}-in-internal-for-{}-link",
+                        workspace_slug, step.name
+                    )),
+                    source: Some(LinkSource {
+                        config: vec![Config {
+                            name: format!(
+                                "subscription-{subscription_counter}-config-v{}",
+                                pipeline.version
+                            ),
+                            properties: {
+                                let mut props = BTreeMap::new();
+                                props.insert(
+                                    "subscriptions".to_string(),
+                                    serde_yaml::Value::String(topic.clone()),
+                                );
+                                props.insert(
+                                    "cluster_uris".to_string(),
+                                    serde_yaml::Value::String(
+                                        settings.nats.cluster_uris.to_string(),
+                                    ),
+                                );
+                                props
+                            },
+                        }],
                     }),
-                });
-                subscription_counter += 1;
-            }
+                    target: LinkTarget {
+                        name: format!("in-internal-for-{}", step.name),
+                        config: None,
+                    },
+                    namespace: "wasmcloud".to_string(),
+                    package: "messaging".to_string(),
+                    interfaces: vec!["handler".to_string()],
+                }),
+            });
+            subscription_counter += 1;
         }
     }
 
@@ -725,48 +725,47 @@ pub fn convert_pipeline(
         if matches!(
             step.step_type,
             PipelineNodeType::OutLog | PipelineNodeType::OutHttpWebhook
-        ) {
-            if let Some(topic) = step_topics.get(&step.name) {
-                nats_traits.push(Trait {
-                    trait_type: "link".to_string(),
-                    properties: TraitProperties::Link(LinkProperties {
-                        name: Some(format!(
-                            "messaging-nats-to-{}-in-internal-for-{}-link",
-                            workspace_slug, step.name
-                        )),
-                        source: Some(LinkSource {
-                            config: vec![Config {
-                                name: format!(
-                                    "subscription-{subscription_counter}-config-v{}",
-                                    pipeline.version
-                                ),
-                                properties: {
-                                    let mut props = BTreeMap::new();
-                                    props.insert(
-                                        "subscriptions".to_string(),
-                                        serde_yaml::Value::String(topic.clone()),
-                                    );
-                                    props.insert(
-                                        "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(
-                                            settings.nats.cluster_uris.to_string(),
-                                        ),
-                                    );
-                                    props
-                                },
-                            }],
-                        }),
-                        target: LinkTarget {
-                            name: format!("in-internal-for-{}", step.name),
-                            config: None,
-                        },
-                        namespace: "wasmcloud".to_string(),
-                        package: "messaging".to_string(),
-                        interfaces: vec!["handler".to_string()],
+        ) && let Some(topic) = step_topics.get(&step.name)
+        {
+            nats_traits.push(Trait {
+                trait_type: "link".to_string(),
+                properties: TraitProperties::Link(LinkProperties {
+                    name: Some(format!(
+                        "messaging-nats-to-{}-in-internal-for-{}-link",
+                        workspace_slug, step.name
+                    )),
+                    source: Some(LinkSource {
+                        config: vec![Config {
+                            name: format!(
+                                "subscription-{subscription_counter}-config-v{}",
+                                pipeline.version
+                            ),
+                            properties: {
+                                let mut props = BTreeMap::new();
+                                props.insert(
+                                    "subscriptions".to_string(),
+                                    serde_yaml::Value::String(topic.clone()),
+                                );
+                                props.insert(
+                                    "cluster_uris".to_string(),
+                                    serde_yaml::Value::String(
+                                        settings.nats.cluster_uris.to_string(),
+                                    ),
+                                );
+                                props
+                            },
+                        }],
                     }),
-                });
-                subscription_counter += 1;
-            }
+                    target: LinkTarget {
+                        name: format!("in-internal-for-{}", step.name),
+                        config: None,
+                    },
+                    namespace: "wasmcloud".to_string(),
+                    package: "messaging".to_string(),
+                    interfaces: vec!["handler".to_string()],
+                }),
+            });
+            subscription_counter += 1;
         }
     }
 
