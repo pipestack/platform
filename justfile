@@ -79,7 +79,7 @@ wash-deploy-example example: (wash-run-all "build")
 
 
 wash-up lattice="default":
-    wash up --allowed-insecure localhost:5000 --lattice {{lattice}} -d
+    wash up --log-level trace --allowed-insecure localhost:5000 --lattice {{lattice}} -d
 
 wash-down:
     wash down --purge-jetstream all --all
