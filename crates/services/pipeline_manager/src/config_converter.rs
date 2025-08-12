@@ -1,133 +1,12 @@
-use serde::{Deserialize, Serialize};
-use shared::{Pipeline, PipelineNodeSettings, PipelineNodeType};
+use shared::{Pipeline, PipelineNodeType};
 use std::collections::{BTreeMap, HashMap};
 
+use crate::builders::{
+    ApplicationRef, BuildContext, Component, Config, LinkProperties, LinkSource, LinkTarget,
+    Metadata, Properties, Spec, Trait, TraitProperties, WadmApplication,
+    registry::ComponentBuilderRegistry,
+};
 use crate::settings::Settings;
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct WadmApplication {
-    #[serde(rename = "apiVersion")]
-    pub api_version: String,
-    pub kind: String,
-    pub metadata: Metadata,
-    pub spec: Spec,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Metadata {
-    pub name: String,
-    pub annotations: BTreeMap<String, String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Spec {
-    pub components: Vec<Component>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Component {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub component_type: String,
-    pub properties: Properties,
-    #[serde(default)]
-    pub traits: Vec<Trait>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum Properties {
-    WithImage {
-        id: String,
-        image: String,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        config: Option<Vec<Config>>,
-    },
-    WithApplication {
-        application: ApplicationRef,
-    },
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ApplicationRef {
-    pub name: String,
-    pub component: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Config {
-    pub name: String,
-    pub properties: BTreeMap<String, serde_yaml::Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Trait {
-    #[serde(rename = "type")]
-    pub trait_type: String,
-    pub properties: TraitProperties,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum TraitProperties {
-    Spreadscaler { instances: u32 },
-    Link(LinkProperties),
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct LinkProperties {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source: Option<LinkSource>,
-    pub target: LinkTarget,
-    pub namespace: String,
-    pub package: String,
-    pub interfaces: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct LinkTarget {
-    name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    config: Option<Vec<Config>>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct LinkSource {
-    // #[serde(default, skip_serializing_if = "Option::is_none")]
-    // pub name: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub config: Vec<Config>,
-}
-
-fn settings_to_config_properties<T: serde::Serialize>(
-    settings: &T,
-) -> BTreeMap<String, serde_yaml::Value> {
-    let settings_value = serde_json::to_value(settings).expect("Failed to serialize settings");
-
-    let mut props = BTreeMap::new();
-    if let serde_json::Value::Object(map) = settings_value {
-        for (key, value) in map {
-            let yaml_value = serde_yaml::to_value(value).expect("Failed to convert to YAML value");
-            props.insert(key, yaml_value);
-        }
-    }
-
-    // Convert props to JSON string
-    let json_string = match serde_json::to_string(&props) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Failed to serialize properties to JSON: {e}");
-            return BTreeMap::new();
-        }
-    };
-
-    // Parse back to serde_yaml::Value to return as JSON string value
-    let mut result = BTreeMap::new();
-    result.insert("json".to_string(), serde_yaml::Value::String(json_string));
-    result
-}
 
 pub fn convert_pipeline(
     pipeline: &Pipeline,
@@ -135,462 +14,22 @@ pub fn convert_pipeline(
     settings: &Settings,
 ) -> Result<WadmApplication, Box<dyn std::error::Error>> {
     let mut components = Vec::new();
-    let mut step_topics = HashMap::new();
+    let step_topics = determine_step_topics(pipeline, workspace_slug);
 
-    // Generate topic names for inter-step communication based on dependency depth
-    // Build a map of node names to their dependency depth
-    let mut node_depths = HashMap::new();
+    // Create build context
+    let context = BuildContext::new(pipeline, workspace_slug, settings, &step_topics);
 
-    // Find root nodes (no dependencies)
+    // Create builder registry
+    let registry = ComponentBuilderRegistry::new();
+
+    // Process each step using the appropriate builder
     for step in &pipeline.nodes {
-        if step.depends_on.is_none() || step.depends_on.as_ref().unwrap().is_empty() {
-            node_depths.insert(step.name.clone(), 1);
-        }
-    }
-
-    // Calculate depths for dependent nodes
-    let mut changed = true;
-    while changed {
-        changed = false;
-        for step in &pipeline.nodes {
-            if let Some(depends_on) = &step.depends_on
-                && !depends_on.is_empty()
-                && !node_depths.contains_key(&step.name)
-            {
-                // Check if all dependencies have been processed
-                let mut max_depth = 0;
-                let mut all_deps_processed = true;
-                for dep in depends_on {
-                    if let Some(&depth) = node_depths.get(dep) {
-                        max_depth = max_depth.max(depth);
-                    } else {
-                        all_deps_processed = false;
-                        break;
-                    }
-                }
-                if all_deps_processed {
-                    node_depths.insert(step.name.clone(), max_depth + 1);
-                    changed = true;
-                }
-            }
-        }
-    }
-
-    // Generate topics for nodes that have dependencies
-    for step in &pipeline.nodes {
-        if let Some(depends_on) = &step.depends_on
-            && !depends_on.is_empty()
-            && let Some(&depth) = node_depths.get(&step.name)
-        {
-            let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
-            step_topics.insert(step.name.clone(), topic);
-        }
-    }
-
-    // Process each step
-    for step in &pipeline.nodes {
-        match step.step_type {
-            PipelineNodeType::InHttpWebhook => {
-                // Add in-http component
-                components.push(Component {
-                    name: step.name.clone(),
-                    component_type: "component".to_string(),
-                    properties: Properties::WithImage {
-                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
-                        image: format!("{}/pipestack/in-http:0.0.1", settings.registry.url),
-                        config: step.settings.as_ref().map(|s| match s {
-                            PipelineNodeSettings::InHttpWebhook(settings) => vec![Config {
-                                name: format!("{}-config-v{}", step.name, pipeline.version),
-                                properties: settings_to_config_properties(settings),
-                            }],
-                            _ => vec![],
-                        }),
-                    },
-                    traits: vec![
-                        Trait {
-                            trait_type: "spreadscaler".to_string(),
-                            properties: TraitProperties::Spreadscaler {
-                                instances: step.instances.unwrap_or(1),
-                            },
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: format!("out-internal-for-{}", step.name),
-                                    config: None,
-                                },
-                                namespace: "pipestack".to_string(),
-                                package: "out".to_string(),
-                                interfaces: vec!["out".to_string()],
-                            }),
-                        },
-                    ],
-                });
-
-                // Add corresponding out-internal component
-                let next_topic = pipeline
-                    .nodes
-                    .iter()
-                    .find(|s| {
-                        s.depends_on
-                            .as_ref()
-                            .is_some_and(|deps| deps.contains(&step.name))
-                    })
-                    .and_then(|s| step_topics.get(&s.name))
-                    .cloned()
-                    .unwrap_or_default();
-
-                if !next_topic.is_empty() {
-                    components.push(Component {
-                        name: format!("out-internal-for-{}", step.name),
-                        component_type: "component".to_string(),
-                        properties: Properties::WithImage {
-                            id: format!(
-                                "{}_{}-out-internal-for-{}",
-                                workspace_slug, pipeline.name, step.name
-                            ),
-                            image: format!(
-                                "{}/pipestack/out-internal:0.0.1",
-                                settings.registry.url
-                            ),
-                            config: Some(vec![Config {
-                                name: format!(
-                                    "out-internal-for-{}-config-v{}",
-                                    step.name, pipeline.version
-                                ),
-                                properties: {
-                                    let mut props = BTreeMap::new();
-                                    props.insert(
-                                        "next-step-topic".to_string(),
-                                        serde_yaml::Value::String(next_topic.clone()),
-                                    );
-                                    props
-                                },
-                            }]),
-                        },
-                        traits: vec![
-                            Trait {
-                                trait_type: "spreadscaler".to_string(),
-                                properties: TraitProperties::Spreadscaler { instances: 1 },
-                            },
-                            Trait {
-                                trait_type: "link".to_string(),
-                                properties: TraitProperties::Link(LinkProperties {
-                                    name: None,
-                                    source: None,
-                                    target: LinkTarget {
-                                        name: "messaging-nats".to_string(),
-                                        config: None,
-                                    },
-                                    namespace: "wasmcloud".to_string(),
-                                    package: "messaging".to_string(),
-                                    interfaces: vec!["consumer".to_string()],
-                                }),
-                            },
-                        ],
-                    });
-                }
-            }
-            PipelineNodeType::ProcessorWasm => {
-                // Add in-internal component for processor
-                components.push(Component {
-                    name: format!("in-internal-for-{}", step.name),
-                    component_type: "component".to_string(),
-                    properties: Properties::WithImage {
-                        id: format!(
-                            "{}_{}-in-internal-for-{}",
-                            workspace_slug, pipeline.name, step.name
-                        ),
-                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
-                        config: None,
-                    },
-                    traits: vec![
-                        Trait {
-                            trait_type: "spreadscaler".to_string(),
-                            properties: TraitProperties::Spreadscaler { instances: 1 },
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: step.name.clone(),
-                                    config: None,
-                                },
-                                namespace: "pipestack".to_string(),
-                                package: "customer".to_string(),
-                                interfaces: vec!["customer".to_string()],
-                            }),
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: format!("out-internal-for-{}", step.name),
-                                    config: None,
-                                },
-                                namespace: "pipestack".to_string(),
-                                package: "out".to_string(),
-                                interfaces: vec!["out".to_string()],
-                            }),
-                        },
-                    ],
-                });
-
-                // Add the processor component itself
-                components.push(Component {
-                    name: step.name.clone(),
-                    component_type: "component".to_string(),
-                    properties: Properties::WithImage {
-                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
-                        image: format!(
-                            "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
-                            settings.registry.url,
-                            workspace_slug,
-                            pipeline.name,
-                            pipeline.version,
-                            step.name
-                        ),
-                        config: None,
-                    },
-                    traits: vec![Trait {
-                        trait_type: "spreadscaler".to_string(),
-                        properties: TraitProperties::Spreadscaler {
-                            instances: step.instances.unwrap_or(1),
-                        },
-                    }],
-                });
-
-                // Add out-internal component for processor
-                let next_topic = pipeline
-                    .nodes
-                    .iter()
-                    .find(|s| {
-                        s.depends_on
-                            .as_ref()
-                            .is_some_and(|deps| deps.contains(&step.name))
-                    })
-                    .and_then(|s| step_topics.get(&s.name))
-                    .cloned()
-                    .unwrap_or_default();
-
-                if !next_topic.is_empty() {
-                    components.push(Component {
-                        name: format!("out-internal-for-{}", step.name),
-                        component_type: "component".to_string(),
-                        properties: Properties::WithImage {
-                            id: format!(
-                                "{}_{}-out-internal-for-{}",
-                                workspace_slug, pipeline.name, step.name
-                            ),
-                            image: format!(
-                                "{}/pipestack/out-internal:0.0.1",
-                                settings.registry.url
-                            ),
-                            config: Some(vec![Config {
-                                name: format!(
-                                    "out-internal-for-{}-config-v{}",
-                                    step.name, pipeline.version
-                                ),
-                                properties: {
-                                    let mut props = BTreeMap::new();
-                                    props.insert(
-                                        "next-step-topic".to_string(),
-                                        serde_yaml::Value::String(next_topic.clone()),
-                                    );
-                                    props
-                                },
-                            }]),
-                        },
-                        traits: vec![
-                            Trait {
-                                trait_type: "spreadscaler".to_string(),
-                                properties: TraitProperties::Spreadscaler { instances: 1 },
-                            },
-                            Trait {
-                                trait_type: "link".to_string(),
-                                properties: TraitProperties::Link(LinkProperties {
-                                    name: None,
-                                    source: None,
-                                    target: LinkTarget {
-                                        name: "messaging-nats".to_string(),
-                                        config: None,
-                                    },
-                                    namespace: "wasmcloud".to_string(),
-                                    package: "messaging".to_string(),
-                                    interfaces: vec!["consumer".to_string()],
-                                }),
-                            },
-                        ],
-                    });
-                }
-            }
-            PipelineNodeType::OutLog => {
-                // Add in-internal component for out-log
-                components.push(Component {
-                    name: format!("in-internal-for-{}", step.name),
-                    component_type: "component".to_string(),
-                    properties: Properties::WithImage {
-                        id: format!(
-                            "{}_{}-in-internal-for-{}",
-                            workspace_slug, pipeline.name, step.name
-                        ),
-                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
-                        config: None,
-                    },
-                    traits: vec![
-                        Trait {
-                            trait_type: "spreadscaler".to_string(),
-                            properties: TraitProperties::Spreadscaler { instances: 1 },
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: "messaging-nats".to_string(),
-                                    config: None,
-                                },
-                                namespace: "wasmcloud".to_string(),
-                                package: "messaging".to_string(),
-                                interfaces: vec!["consumer".to_string()],
-                            }),
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: step.name.clone(),
-                                    config: None,
-                                },
-                                namespace: "pipestack".to_string(),
-                                package: "out".to_string(),
-                                interfaces: vec!["out".to_string()],
-                            }),
-                        },
-                    ],
-                });
-
-                // Add the out-log component itself
-                components.push(Component {
-                    name: step.name.clone(),
-                    component_type: "component".to_string(),
-                    properties: Properties::WithImage {
-                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
-                        image: format!("{}/pipestack/out-log:0.0.1", settings.registry.url),
-                        config: None,
-                    },
-                    traits: vec![Trait {
-                        trait_type: "spreadscaler".to_string(),
-                        properties: TraitProperties::Spreadscaler {
-                            instances: step.instances.unwrap_or(1),
-                        },
-                    }],
-                });
-            }
-            PipelineNodeType::OutHttpWebhook => {
-                // Add in-internal component for out-http-webhook
-                components.push(Component {
-                    name: format!("in-internal-for-{}", step.name),
-                    component_type: "component".to_string(),
-                    properties: Properties::WithImage {
-                        id: format!(
-                            "{}_{}-in-internal-for-{}",
-                            workspace_slug, pipeline.name, step.name
-                        ),
-                        image: format!("{}/pipestack/in-internal:0.0.1", settings.registry.url),
-                        config: None,
-                    },
-                    traits: vec![
-                        Trait {
-                            trait_type: "spreadscaler".to_string(),
-                            properties: TraitProperties::Spreadscaler { instances: 1 },
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: "messaging-nats".to_string(),
-                                    config: None,
-                                },
-                                namespace: "wasmcloud".to_string(),
-                                package: "messaging".to_string(),
-                                interfaces: vec!["consumer".to_string()],
-                            }),
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: step.name.clone(),
-                                    config: None,
-                                },
-                                namespace: "pipestack".to_string(),
-                                package: "out".to_string(),
-                                interfaces: vec!["out".to_string()],
-                            }),
-                        },
-                    ],
-                });
-
-                // Add the out-http-webhook component itself
-                components.push(Component {
-                    name: step.name.clone(),
-                    component_type: "component".to_string(),
-                    properties: Properties::WithImage {
-                        id: format!("{}_{}-{}", workspace_slug, pipeline.name, step.name.clone()),
-                        image: format!(
-                            "{}/pipestack/out-http-webhook:0.0.1",
-                            settings.registry.url
-                        ),
-                        config: step.settings.as_ref().map(|s| match s {
-                            PipelineNodeSettings::OutHttpWebhook(settings) => vec![Config {
-                                name: format!("{}-config-v{}", step.name, pipeline.version),
-                                properties: settings_to_config_properties(settings),
-                            }],
-                            _ => vec![],
-                        }),
-                    },
-                    traits: vec![
-                        Trait {
-                            trait_type: "spreadscaler".to_string(),
-                            properties: TraitProperties::Spreadscaler {
-                                instances: step.instances.unwrap_or(1),
-                            },
-                        },
-                        Trait {
-                            trait_type: "link".to_string(),
-                            properties: TraitProperties::Link(LinkProperties {
-                                name: None,
-                                source: None,
-                                target: LinkTarget {
-                                    name: "httpclient".to_string(),
-                                    config: None,
-                                },
-                                namespace: "wasi".to_string(),
-                                package: "http".to_string(),
-                                interfaces: vec!["outgoing-handler".to_string()],
-                            }),
-                        },
-                    ],
-                });
-            }
-            _ => {
-                // Handle other step types as needed
-            }
+        if let Some(builder) = registry.get_builder(&step.step_type) {
+            let step_components = builder.build_components(step, &context)?;
+            components.extend(step_components);
+        } else {
+            // Handle unsupported step types
+            eprintln!("Unsupported step type: {:?}", step.step_type);
         }
     }
 
@@ -624,7 +63,7 @@ pub fn convert_pipeline(
                         workspace_slug, http_step.name
                     )),
                     source: Some(LinkSource {
-                        config: vec![Config {
+                        config: Some(vec![Config {
                             name: format!(
                                 "{}-{}-httpserver-path-config-v{}",
                                 workspace_slug, pipeline.name, pipeline.version
@@ -637,7 +76,7 @@ pub fn convert_pipeline(
                                 );
                                 props
                             },
-                        }],
+                        }]),
                     }),
                     target: LinkTarget {
                         name: http_step.name.clone(),
@@ -677,96 +116,95 @@ pub fn convert_pipeline(
     let mut subscription_counter = 1;
     for step in &pipeline.nodes {
         if matches!(step.step_type, PipelineNodeType::ProcessorWasm)
-            && let Some(topic) = step_topics.get(&step.name)
-        {
-            nats_traits.push(Trait {
-                trait_type: "link".to_string(),
-                properties: TraitProperties::Link(LinkProperties {
-                    name: Some(format!(
-                        "messaging-nats-to-{}-in-internal-for-{}-link",
-                        workspace_slug, step.name
-                    )),
-                    source: Some(LinkSource {
-                        config: vec![Config {
-                            name: format!(
-                                "subscription-{subscription_counter}-config-v{}",
-                                pipeline.version
-                            ),
-                            properties: {
-                                let mut props = BTreeMap::new();
-                                props.insert(
-                                    "subscriptions".to_string(),
-                                    serde_yaml::Value::String(topic.clone()),
-                                );
-                                props.insert(
-                                    "cluster_uris".to_string(),
-                                    serde_yaml::Value::String(
-                                        settings.nats.cluster_uris.to_string(),
-                                    ),
-                                );
-                                props
-                            },
-                        }],
+            && let Some(topic) = step_topics.get(&step.name) {
+                nats_traits.push(Trait {
+                    trait_type: "link".to_string(),
+                    properties: TraitProperties::Link(LinkProperties {
+                        name: Some(format!(
+                            "messaging-nats-to-{}-in-internal-for-{}-link",
+                            workspace_slug, step.name
+                        )),
+                        source: Some(LinkSource {
+                            config: Some(vec![Config {
+                                name: format!(
+                                    "subscription-{subscription_counter}-config-v{}",
+                                    pipeline.version
+                                ),
+                                properties: {
+                                    let mut props = BTreeMap::new();
+                                    props.insert(
+                                        "subscriptions".to_string(),
+                                        serde_yaml::Value::String(topic.clone()),
+                                    );
+                                    props.insert(
+                                        "cluster_uris".to_string(),
+                                        serde_yaml::Value::String(
+                                            settings.nats.cluster_uris.to_string(),
+                                        ),
+                                    );
+                                    props
+                                },
+                            }]),
+                        }),
+                        target: LinkTarget {
+                            name: format!("in-internal-for-{}", step.name),
+                            config: None,
+                        },
+                        namespace: "wasmcloud".to_string(),
+                        package: "messaging".to_string(),
+                        interfaces: vec!["handler".to_string()],
                     }),
-                    target: LinkTarget {
-                        name: format!("in-internal-for-{}", step.name),
-                        config: None,
-                    },
-                    namespace: "wasmcloud".to_string(),
-                    package: "messaging".to_string(),
-                    interfaces: vec!["handler".to_string()],
-                }),
-            });
-            subscription_counter += 1;
-        }
+                });
+                subscription_counter += 1;
+            }
     }
 
     for step in &pipeline.nodes {
         if matches!(
             step.step_type,
             PipelineNodeType::OutLog | PipelineNodeType::OutHttpWebhook
-        ) && let Some(topic) = step_topics.get(&step.name)
-        {
-            nats_traits.push(Trait {
-                trait_type: "link".to_string(),
-                properties: TraitProperties::Link(LinkProperties {
-                    name: Some(format!(
-                        "messaging-nats-to-{}-in-internal-for-{}-link",
-                        workspace_slug, step.name
-                    )),
-                    source: Some(LinkSource {
-                        config: vec![Config {
-                            name: format!(
-                                "subscription-{subscription_counter}-config-v{}",
-                                pipeline.version
-                            ),
-                            properties: {
-                                let mut props = BTreeMap::new();
-                                props.insert(
-                                    "subscriptions".to_string(),
-                                    serde_yaml::Value::String(topic.clone()),
-                                );
-                                props.insert(
-                                    "cluster_uris".to_string(),
-                                    serde_yaml::Value::String(
-                                        settings.nats.cluster_uris.to_string(),
-                                    ),
-                                );
-                                props
-                            },
-                        }],
+        )
+            && let Some(topic) = step_topics.get(&step.name) {
+                nats_traits.push(Trait {
+                    trait_type: "link".to_string(),
+                    properties: TraitProperties::Link(LinkProperties {
+                        name: Some(format!(
+                            "messaging-nats-to-{}-in-internal-for-{}-link",
+                            workspace_slug, step.name
+                        )),
+                        source: Some(LinkSource {
+                            config: Some(vec![Config {
+                                name: format!(
+                                    "subscription-{subscription_counter}-config-v{}",
+                                    pipeline.version
+                                ),
+                                properties: {
+                                    let mut props = BTreeMap::new();
+                                    props.insert(
+                                        "subscriptions".to_string(),
+                                        serde_yaml::Value::String(topic.clone()),
+                                    );
+                                    props.insert(
+                                        "cluster_uris".to_string(),
+                                        serde_yaml::Value::String(
+                                            settings.nats.cluster_uris.to_string(),
+                                        ),
+                                    );
+                                    props
+                                },
+                            }]),
+                        }),
+                        target: LinkTarget {
+                            name: format!("in-internal-for-{}", step.name),
+                            config: None,
+                        },
+                        namespace: "wasmcloud".to_string(),
+                        package: "messaging".to_string(),
+                        interfaces: vec!["handler".to_string()],
                     }),
-                    target: LinkTarget {
-                        name: format!("in-internal-for-{}", step.name),
-                        config: None,
-                    },
-                    namespace: "wasmcloud".to_string(),
-                    package: "messaging".to_string(),
-                    interfaces: vec!["handler".to_string()],
-                }),
-            });
-            subscription_counter += 1;
-        }
+                });
+                subscription_counter += 1;
+            }
     }
 
     components.push(Component {
@@ -796,6 +234,58 @@ pub fn convert_pipeline(
     })
 }
 
+fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMap<String, String> {
+    let mut step_topics = HashMap::new();
+
+    // Generate topic names for inter-step communication based on dependency depth
+    // Build a map of node names to their dependency depth
+    let mut node_depths = HashMap::new();
+
+    // Find root nodes (no dependencies)
+    for step in &pipeline.nodes {
+        if step.depends_on.is_none() || step.depends_on.as_ref().unwrap().is_empty() {
+            node_depths.insert(step.name.clone(), 1);
+        }
+    }
+
+    // Calculate depths for dependent nodes
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for step in &pipeline.nodes {
+            if let Some(depends_on) = &step.depends_on
+                && !depends_on.is_empty() && !node_depths.contains_key(&step.name) {
+                    // Check if all dependencies have been processed
+                    let mut max_depth = 0;
+                    let mut all_deps_processed = true;
+                    for dep in depends_on {
+                        if let Some(&depth) = node_depths.get(dep) {
+                            max_depth = max_depth.max(depth);
+                        } else {
+                            all_deps_processed = false;
+                            break;
+                        }
+                    }
+                    if all_deps_processed {
+                        node_depths.insert(step.name.clone(), max_depth + 1);
+                        changed = true;
+                    }
+                }
+        }
+    }
+
+    // Generate topics for nodes that have dependencies
+    for step in &pipeline.nodes {
+        if let Some(depends_on) = &step.depends_on
+            && !depends_on.is_empty()
+                && let Some(&depth) = node_depths.get(&step.name) {
+                    let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
+                    step_topics.insert(step.name.clone(), topic);
+                }
+    }
+    step_topics
+}
+
 pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmApplication {
     let mut annotations = BTreeMap::new();
     annotations.insert(
@@ -808,12 +298,9 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
     );
     annotations.insert("version".to_string(), "0.3.0".to_string());
 
-    let metadata = Metadata {
-        name: format!("{workspace_slug}-providers"),
-        annotations,
-    };
+    let mut components = Vec::new();
 
-    // HTTP Server component
+    // HTTP Server provider
     let mut http_server_config_props = BTreeMap::new();
     http_server_config_props.insert(
         "routing_mode".to_string(),
@@ -824,81 +311,71 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
         serde_yaml::Value::String("0.0.0.0:8000".to_string()),
     );
 
-    let http_server_config = Config {
-        name: "default-http-config".to_string(),
-        properties: http_server_config_props,
-    };
-
-    let http_server_properties = Properties::WithImage {
-        id: "httpserver".to_string(),
-        image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
-        config: Some(vec![http_server_config]),
-    };
-
-    let http_server_trait = Trait {
-        trait_type: "spreadscaler".to_string(),
-        properties: TraitProperties::Spreadscaler { instances: 1 },
-    };
-
-    let http_server_component = Component {
+    components.push(Component {
         name: "httpserver".to_string(),
         component_type: "capability".to_string(),
-        properties: http_server_properties,
-        traits: vec![http_server_trait],
-    };
+        properties: Properties::WithImage {
+            id: "httpserver".to_string(),
+            image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
+            config: Some(vec![Config {
+                name: "default-http-config".to_string(),
+                properties: http_server_config_props,
+            }]),
+        },
+        traits: vec![Trait {
+            trait_type: "spreadscaler".to_string(),
+            properties: TraitProperties::Spreadscaler { instances: 1 },
+        }],
+    });
 
-    // HTTP Client component
-    let http_client_properties = Properties::WithImage {
-        id: "httpclient".to_string(),
-        image: "ghcr.io/wasmcloud/http-client:0.13.1".to_string(),
-        config: None,
-    };
-
-    let http_client_component = Component {
+    // HTTP Client provider
+    components.push(Component {
         name: "httpclient".to_string(),
         component_type: "capability".to_string(),
-        properties: http_client_properties,
-        traits: vec![],
-    };
+        properties: Properties::WithImage {
+            id: "httpclient".to_string(),
+            image: "ghcr.io/wasmcloud/http-client:0.13.1".to_string(),
+            config: None,
+        },
+        traits: vec![Trait {
+            trait_type: "spreadscaler".to_string(),
+            properties: TraitProperties::Spreadscaler { instances: 1 },
+        }],
+    });
 
-    // Messaging NATS component
-    let nats_properties = Properties::WithImage {
-        id: "messaging-nats".to_string(),
-        image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
-        config: Some(vec![Config {
-            name: "messaging-nats-config".to_string(),
-            properties: {
-                let mut props = BTreeMap::new();
-                props.insert(
-                    "cluster_uris".to_string(),
-                    serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
-                );
-                props
-            },
-        }]),
-    };
-
-    let nats_trait = Trait {
-        trait_type: "spreadscaler".to_string(),
-        properties: TraitProperties::Spreadscaler { instances: 1 },
-    };
-
-    let nats_component = Component {
+    // NATS messaging provider
+    components.push(Component {
         name: "messaging-nats".to_string(),
         component_type: "capability".to_string(),
-        properties: nats_properties,
-        traits: vec![nats_trait],
-    };
-
-    let spec = Spec {
-        components: vec![http_server_component, http_client_component, nats_component],
-    };
+        properties: Properties::WithImage {
+            id: "messaging-nats".to_string(),
+            image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
+            config: Some(vec![Config {
+                name: format!("{workspace_slug}-messaging-nats-config"),
+                properties: {
+                    let mut props = BTreeMap::new();
+                    props.insert(
+                        "cluster_uris".to_string(),
+                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
+                    );
+                    props
+                },
+            }]),
+        },
+        traits: vec![Trait {
+            trait_type: "spreadscaler".to_string(),
+            properties: TraitProperties::Spreadscaler { instances: 1 },
+        }],
+    });
 
     WadmApplication {
         api_version: "core.oam.dev/v1beta1".to_string(),
         kind: "Application".to_string(),
-        metadata,
-        spec,
+        metadata: Metadata {
+            name: format!("{workspace_slug}-providers"),
+            annotations,
+        },
+        spec: Spec { components },
     }
 }
 
