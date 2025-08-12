@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, HashMap};
 use crate::settings::Settings;
 
 pub mod nodes;
-pub mod registry;
+pub mod providers;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WadmApplication {
@@ -41,7 +41,7 @@ pub struct Component {
 #[serde(untagged)]
 pub enum Properties {
     WithImage {
-        id: String,
+        id: Option<String>,
         image: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         config: Option<Vec<Config>>,
@@ -147,6 +147,25 @@ pub trait ComponentBuilder {
         step: &PipelineNode,
         context: &BuildContext,
     ) -> Result<Vec<Component>, Box<dyn std::error::Error>>;
+}
+
+/// Enum for provider types
+#[cfg(test)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProviderType {
+    HttpServer,
+    HttpClient,
+    NatsMessaging,
+}
+
+/// Trait for building provider components
+pub trait ProviderBuilder {
+    /// Build a provider component for a given workspace
+    fn build_component(
+        &self,
+        workspace_slug: &str,
+        settings: &Settings,
+    ) -> Result<Component, Box<dyn std::error::Error>>;
 }
 
 /// Helper function to convert settings to config properties

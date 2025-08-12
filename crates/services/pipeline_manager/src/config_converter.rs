@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 use crate::builders::{
     ApplicationRef, BuildContext, Component, Config, LinkProperties, LinkSource, LinkTarget,
     Metadata, Properties, Spec, Trait, TraitProperties, WadmApplication,
-    registry::ComponentBuilderRegistry,
+    nodes::registry::ComponentBuilderRegistry, providers::ProviderBuilderRegistry,
 };
 use crate::settings::Settings;
 
@@ -116,95 +116,96 @@ pub fn convert_pipeline(
     let mut subscription_counter = 1;
     for step in &pipeline.nodes {
         if matches!(step.step_type, PipelineNodeType::ProcessorWasm)
-            && let Some(topic) = step_topics.get(&step.name) {
-                nats_traits.push(Trait {
-                    trait_type: "link".to_string(),
-                    properties: TraitProperties::Link(LinkProperties {
-                        name: Some(format!(
-                            "messaging-nats-to-{}-in-internal-for-{}-link",
-                            workspace_slug, step.name
-                        )),
-                        source: Some(LinkSource {
-                            config: Some(vec![Config {
-                                name: format!(
-                                    "subscription-{subscription_counter}-config-v{}",
-                                    pipeline.version
-                                ),
-                                properties: {
-                                    let mut props = BTreeMap::new();
-                                    props.insert(
-                                        "subscriptions".to_string(),
-                                        serde_yaml::Value::String(topic.clone()),
-                                    );
-                                    props.insert(
-                                        "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(
-                                            settings.nats.cluster_uris.to_string(),
-                                        ),
-                                    );
-                                    props
-                                },
-                            }]),
-                        }),
-                        target: LinkTarget {
-                            name: format!("in-internal-for-{}", step.name),
-                            config: None,
-                        },
-                        namespace: "wasmcloud".to_string(),
-                        package: "messaging".to_string(),
-                        interfaces: vec!["handler".to_string()],
+            && let Some(topic) = step_topics.get(&step.name)
+        {
+            nats_traits.push(Trait {
+                trait_type: "link".to_string(),
+                properties: TraitProperties::Link(LinkProperties {
+                    name: Some(format!(
+                        "messaging-nats-to-{}-in-internal-for-{}-link",
+                        workspace_slug, step.name
+                    )),
+                    source: Some(LinkSource {
+                        config: Some(vec![Config {
+                            name: format!(
+                                "subscription-{subscription_counter}-config-v{}",
+                                pipeline.version
+                            ),
+                            properties: {
+                                let mut props = BTreeMap::new();
+                                props.insert(
+                                    "subscriptions".to_string(),
+                                    serde_yaml::Value::String(topic.clone()),
+                                );
+                                props.insert(
+                                    "cluster_uris".to_string(),
+                                    serde_yaml::Value::String(
+                                        settings.nats.cluster_uris.to_string(),
+                                    ),
+                                );
+                                props
+                            },
+                        }]),
                     }),
-                });
-                subscription_counter += 1;
-            }
+                    target: LinkTarget {
+                        name: format!("in-internal-for-{}", step.name),
+                        config: None,
+                    },
+                    namespace: "wasmcloud".to_string(),
+                    package: "messaging".to_string(),
+                    interfaces: vec!["handler".to_string()],
+                }),
+            });
+            subscription_counter += 1;
+        }
     }
 
     for step in &pipeline.nodes {
         if matches!(
             step.step_type,
             PipelineNodeType::OutLog | PipelineNodeType::OutHttpWebhook
-        )
-            && let Some(topic) = step_topics.get(&step.name) {
-                nats_traits.push(Trait {
-                    trait_type: "link".to_string(),
-                    properties: TraitProperties::Link(LinkProperties {
-                        name: Some(format!(
-                            "messaging-nats-to-{}-in-internal-for-{}-link",
-                            workspace_slug, step.name
-                        )),
-                        source: Some(LinkSource {
-                            config: Some(vec![Config {
-                                name: format!(
-                                    "subscription-{subscription_counter}-config-v{}",
-                                    pipeline.version
-                                ),
-                                properties: {
-                                    let mut props = BTreeMap::new();
-                                    props.insert(
-                                        "subscriptions".to_string(),
-                                        serde_yaml::Value::String(topic.clone()),
-                                    );
-                                    props.insert(
-                                        "cluster_uris".to_string(),
-                                        serde_yaml::Value::String(
-                                            settings.nats.cluster_uris.to_string(),
-                                        ),
-                                    );
-                                    props
-                                },
-                            }]),
-                        }),
-                        target: LinkTarget {
-                            name: format!("in-internal-for-{}", step.name),
-                            config: None,
-                        },
-                        namespace: "wasmcloud".to_string(),
-                        package: "messaging".to_string(),
-                        interfaces: vec!["handler".to_string()],
+        ) && let Some(topic) = step_topics.get(&step.name)
+        {
+            nats_traits.push(Trait {
+                trait_type: "link".to_string(),
+                properties: TraitProperties::Link(LinkProperties {
+                    name: Some(format!(
+                        "messaging-nats-to-{}-in-internal-for-{}-link",
+                        workspace_slug, step.name
+                    )),
+                    source: Some(LinkSource {
+                        config: Some(vec![Config {
+                            name: format!(
+                                "subscription-{subscription_counter}-config-v{}",
+                                pipeline.version
+                            ),
+                            properties: {
+                                let mut props = BTreeMap::new();
+                                props.insert(
+                                    "subscriptions".to_string(),
+                                    serde_yaml::Value::String(topic.clone()),
+                                );
+                                props.insert(
+                                    "cluster_uris".to_string(),
+                                    serde_yaml::Value::String(
+                                        settings.nats.cluster_uris.to_string(),
+                                    ),
+                                );
+                                props
+                            },
+                        }]),
                     }),
-                });
-                subscription_counter += 1;
-            }
+                    target: LinkTarget {
+                        name: format!("in-internal-for-{}", step.name),
+                        config: None,
+                    },
+                    namespace: "wasmcloud".to_string(),
+                    package: "messaging".to_string(),
+                    interfaces: vec!["handler".to_string()],
+                }),
+            });
+            subscription_counter += 1;
+        }
     }
 
     components.push(Component {
@@ -254,23 +255,25 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
         changed = false;
         for step in &pipeline.nodes {
             if let Some(depends_on) = &step.depends_on
-                && !depends_on.is_empty() && !node_depths.contains_key(&step.name) {
-                    // Check if all dependencies have been processed
-                    let mut max_depth = 0;
-                    let mut all_deps_processed = true;
-                    for dep in depends_on {
-                        if let Some(&depth) = node_depths.get(dep) {
-                            max_depth = max_depth.max(depth);
-                        } else {
-                            all_deps_processed = false;
-                            break;
-                        }
-                    }
-                    if all_deps_processed {
-                        node_depths.insert(step.name.clone(), max_depth + 1);
-                        changed = true;
+                && !depends_on.is_empty()
+                && !node_depths.contains_key(&step.name)
+            {
+                // Check if all dependencies have been processed
+                let mut max_depth = 0;
+                let mut all_deps_processed = true;
+                for dep in depends_on {
+                    if let Some(&depth) = node_depths.get(dep) {
+                        max_depth = max_depth.max(depth);
+                    } else {
+                        all_deps_processed = false;
+                        break;
                     }
                 }
+                if all_deps_processed {
+                    node_depths.insert(step.name.clone(), max_depth + 1);
+                    changed = true;
+                }
+            }
         }
     }
 
@@ -278,10 +281,11 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
     for step in &pipeline.nodes {
         if let Some(depends_on) = &step.depends_on
             && !depends_on.is_empty()
-                && let Some(&depth) = node_depths.get(&step.name) {
-                    let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
-                    step_topics.insert(step.name.clone(), topic);
-                }
+            && let Some(&depth) = node_depths.get(&step.name)
+        {
+            let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
+            step_topics.insert(step.name.clone(), topic);
+        }
     }
     step_topics
 }
@@ -300,73 +304,18 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
 
     let mut components = Vec::new();
 
-    // HTTP Server provider
-    let mut http_server_config_props = BTreeMap::new();
-    http_server_config_props.insert(
-        "routing_mode".to_string(),
-        serde_yaml::Value::String("path".to_string()),
-    );
-    http_server_config_props.insert(
-        "address".to_string(),
-        serde_yaml::Value::String("0.0.0.0:8000".to_string()),
-    );
+    // Create provider registry
+    let registry = ProviderBuilderRegistry::new();
 
-    components.push(Component {
-        name: "httpserver".to_string(),
-        component_type: "capability".to_string(),
-        properties: Properties::WithImage {
-            id: "httpserver".to_string(),
-            image: "ghcr.io/wasmcloud/http-server:0.27.0".to_string(),
-            config: Some(vec![Config {
-                name: "default-http-config".to_string(),
-                properties: http_server_config_props,
-            }]),
-        },
-        traits: vec![Trait {
-            trait_type: "spreadscaler".to_string(),
-            properties: TraitProperties::Spreadscaler { instances: 1 },
-        }],
-    });
-
-    // HTTP Client provider
-    components.push(Component {
-        name: "httpclient".to_string(),
-        component_type: "capability".to_string(),
-        properties: Properties::WithImage {
-            id: "httpclient".to_string(),
-            image: "ghcr.io/wasmcloud/http-client:0.13.1".to_string(),
-            config: None,
-        },
-        traits: vec![Trait {
-            trait_type: "spreadscaler".to_string(),
-            properties: TraitProperties::Spreadscaler { instances: 1 },
-        }],
-    });
-
-    // NATS messaging provider
-    components.push(Component {
-        name: "messaging-nats".to_string(),
-        component_type: "capability".to_string(),
-        properties: Properties::WithImage {
-            id: "messaging-nats".to_string(),
-            image: "ghcr.io/wasmcloud/messaging-nats:0.27.0".to_string(),
-            config: Some(vec![Config {
-                name: format!("{workspace_slug}-messaging-nats-config"),
-                properties: {
-                    let mut props = BTreeMap::new();
-                    props.insert(
-                        "cluster_uris".to_string(),
-                        serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
-                    );
-                    props
-                },
-            }]),
-        },
-        traits: vec![Trait {
-            trait_type: "spreadscaler".to_string(),
-            properties: TraitProperties::Spreadscaler { instances: 1 },
-        }],
-    });
+    // Build all provider components using the registry
+    for provider_builder in registry.get_all_providers() {
+        match provider_builder.build_component(workspace_slug, settings) {
+            Ok(component) => components.push(component),
+            Err(e) => {
+                eprintln!("Failed to build provider component: {}", e);
+            }
+        }
+    }
 
     WadmApplication {
         api_version: "core.oam.dev/v1beta1".to_string(),
@@ -921,5 +870,143 @@ spec:
 
         // STRUCTURED COMPARISON - much more reliable!
         assert_eq!(actual_wadm, expected_wadm);
+    }
+
+    #[test]
+    fn test_provider_registry() {
+        use crate::builders::providers::ProviderBuilderRegistry;
+
+        let settings = Settings {
+            cloudflare: crate::settings::Cloudflare {
+                account_id: "test_account".to_string(),
+                r2_access_key_id: "test_key".to_string(),
+                r2_secret_access_key: "test_secret".to_string(),
+                r2_bucket: "test_bucket".to_string(),
+            },
+            nats: crate::settings::Nats {
+                cluster_uris: "nats://localhost:4222".to_string(),
+            },
+            registry: crate::settings::Registry {
+                url: "http://localhost:8080".to_string(),
+            },
+        };
+
+        let registry = ProviderBuilderRegistry::new();
+        let workspace_slug = "test-workspace";
+
+        // Test that all providers can be built successfully
+        let mut component_names = Vec::new();
+        for provider_builder in registry.get_all_providers() {
+            match provider_builder.build_component(workspace_slug, &settings) {
+                Ok(component) => {
+                    component_names.push(component.name.clone());
+                    // Verify component structure
+                    assert_eq!(component.component_type, "capability");
+                    assert!(!component.traits.is_empty());
+                }
+                Err(e) => panic!("Failed to build provider component: {}", e),
+            }
+        }
+
+        // Verify we have all expected providers
+        component_names.sort();
+        let mut expected_names = vec![
+            "httpserver".to_string(),
+            "httpclient".to_string(),
+            "messaging-nats".to_string(),
+        ];
+        expected_names.sort();
+        assert_eq!(component_names, expected_names);
+    }
+
+    #[test]
+    fn test_create_providers_wadm_uses_registry() {
+        let settings = Settings {
+            cloudflare: crate::settings::Cloudflare {
+                account_id: "test_account".to_string(),
+                r2_access_key_id: "test_key".to_string(),
+                r2_secret_access_key: "test_secret".to_string(),
+                r2_bucket: "test_bucket".to_string(),
+            },
+            nats: crate::settings::Nats {
+                cluster_uris: "nats://localhost:4222".to_string(),
+            },
+            registry: crate::settings::Registry {
+                url: "http://localhost:8080".to_string(),
+            },
+        };
+
+        let wadm_app = create_providers_wadm("test-workspace", &settings);
+
+        // Verify the application structure
+        assert_eq!(wadm_app.api_version, "core.oam.dev/v1beta1");
+        assert_eq!(wadm_app.kind, "Application");
+        assert_eq!(wadm_app.metadata.name, "test-workspace-providers");
+
+        // Verify we have exactly 3 components (the standard providers)
+        assert_eq!(wadm_app.spec.components.len(), 3);
+
+        // Verify component names
+        let mut component_names: Vec<String> = wadm_app
+            .spec
+            .components
+            .iter()
+            .map(|c| c.name.clone())
+            .collect();
+        component_names.sort();
+
+        let mut expected_names = vec![
+            "httpserver".to_string(),
+            "httpclient".to_string(),
+            "messaging-nats".to_string(),
+        ];
+        expected_names.sort();
+
+        assert_eq!(component_names, expected_names);
+    }
+
+    #[test]
+    fn test_individual_provider_builders() {
+        use crate::builders::{ProviderType, providers::ProviderBuilderRegistry};
+
+        let settings = Settings {
+            cloudflare: crate::settings::Cloudflare {
+                account_id: "test_account".to_string(),
+                r2_access_key_id: "test_key".to_string(),
+                r2_secret_access_key: "test_secret".to_string(),
+                r2_bucket: "test_bucket".to_string(),
+            },
+            nats: crate::settings::Nats {
+                cluster_uris: "nats://localhost:4222".to_string(),
+            },
+            registry: crate::settings::Registry {
+                url: "http://localhost:8080".to_string(),
+            },
+        };
+
+        let registry = ProviderBuilderRegistry::new();
+        let workspace_slug = "test-workspace";
+
+        // Test individual provider builders using the get_builder method
+        if let Some(http_server_builder) = registry.get_builder(&ProviderType::HttpServer) {
+            let component = http_server_builder
+                .build_component(workspace_slug, &settings)
+                .unwrap();
+            assert_eq!(component.name, "httpserver");
+        }
+
+        if let Some(http_client_builder) = registry.get_builder(&ProviderType::HttpClient) {
+            let component = http_client_builder
+                .build_component(workspace_slug, &settings)
+                .unwrap();
+            assert_eq!(component.name, "httpclient");
+        }
+
+        if let Some(nats_builder) = registry.get_builder(&ProviderType::NatsMessaging) {
+            let component = nats_builder
+                .build_component(workspace_slug, &settings)
+                .unwrap();
+            assert_eq!(component.name, "messaging-nats");
+        }
     }
 }

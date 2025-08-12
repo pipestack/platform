@@ -19,10 +19,10 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
             name: format!("in-internal-for-{}", step.name),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
-                id: format!(
+                id: Some(format!(
                     "{}_{}-in-internal-for-{}",
                     context.workspace_slug, context.pipeline.name, step.name
-                ),
+                )),
                 image: format!(
                     "{}/pipestack/in-internal:0.0.1",
                     context.settings.registry.url
@@ -70,10 +70,10 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
             name: step.name.clone(),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
-                id: format!(
+                id: Some(format!(
                     "{}_{}-{}",
                     context.workspace_slug, context.pipeline.name, step.name
-                ),
+                )),
                 image: format!(
                     "{}/pipestack/out-http-webhook:0.0.1",
                     context.settings.registry.url

@@ -19,10 +19,10 @@ impl ComponentBuilder for ProcessorWasmBuilder {
             name: format!("in-internal-for-{}", step.name),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
-                id: format!(
+                id: Some(format!(
                     "{}_{}-in-internal-for-{}",
                     context.workspace_slug, context.pipeline.name, step.name
-                ),
+                )),
                 image: format!(
                     "{}/pipestack/in-internal:0.0.1",
                     context.settings.registry.url
@@ -70,10 +70,10 @@ impl ComponentBuilder for ProcessorWasmBuilder {
             name: step.name.clone(),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
-                id: format!(
+                id: Some(format!(
                     "{}_{}-{}",
                     context.workspace_slug, context.pipeline.name, step.name
-                ),
+                )),
                 image: format!(
                     "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
                     context.settings.registry.url,
@@ -100,10 +100,10 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                 name: format!("out-internal-for-{}", step.name),
                 component_type: "component".to_string(),
                 properties: Properties::WithImage {
-                    id: format!(
+                    id: Some(format!(
                         "{}_{}-out-internal-for-{}",
                         context.workspace_slug, context.pipeline.name, step.name
-                    ),
+                    )),
                     image: format!(
                         "{}/pipestack/out-internal:0.0.1",
                         context.settings.registry.url
