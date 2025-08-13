@@ -300,7 +300,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
         "description".to_string(),
         format!("Shared providers for the {workspace_slug} workspace"),
     );
-    annotations.insert("version".to_string(), "0.3.0".to_string());
+    annotations.insert("version".to_string(), "0.4.0".to_string());
 
     let mut components = Vec::new();
 
