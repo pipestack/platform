@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use shared::Pipeline;
 use tokio::net::TcpListener;
 
+mod builders;
 mod config_converter;
 mod registry;
 mod settings;
