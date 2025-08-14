@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  build-artifacts:
+    if: github.head_ref == 'release' && github.event.pull_request.merged == true
+
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: "true"
+
+      - name: Install wash CLI
+        run: |
+          curl -s https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh | sudo bash
+          sudo apt install wash
+
+      - name: Build WebAssembly components
+        run: devbox run just wash-run-all build
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: wasm-components
+          path: crates/nodes/**/build/*_s.wasm
+          if-no-files-found: error
+
+  release:
+    needs: [build-artifacts]
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: knope-dev/action@v2.1.0
+        with:
+          version: 0.21.2 # Also update config/devbox/flakes/knope/flake.nix and .github/workflows/prepare-release.yaml
+      - run: knope release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # publish-crate:
+  #   needs: [release]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4.2.2
+  #     - uses: Swatinem/rust-cache@v2.7.7
+  #     - uses: katyo/publish-crates@v2
+  #       with:
+  #         registry-token: ${{ secrets.CARGO_TOKEN }}
