@@ -1,28 +1,32 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.2/.schema/devbox.schema.json",
   "packages": {
-    "rustup":          "latest",
-    "libiconv":        "latest",
-    "just":            "latest",
+    "path:config/devbox/flakes/knope#knope-cli": {
+      "version": "",
+      "platforms": ["aarch64-darwin"]
+    },
+    "rustup": "latest",
+    "libiconv": "latest",
+    "just": "latest",
     "process-compose": "latest",
     "openssl": {
-      "version":   "latest",
+      "version": "latest",
       "platforms": ["x86_64-linux"]
     },
     "pkg-config": {
-      "version":   "latest",
+      "version": "latest",
       "platforms": ["x86_64-linux"]
     },
-    "lefthook":    "latest",
+    "lefthook": "latest",
     "openssl.dev": ""
   },
   "env": {
     "WASMCLOUD_OBSERVABILITY_ENABLED": "true",
-    "OTEL_TRACES_EXPORTER":            "otlp",
-    "WASMCLOUD_VERSION":               "1.8.0",
-    "OTEL_EXPORTER_OTLP_ENDPOINT":     "http://127.0.0.1:4318",
-    "WASMCLOUD_OCI_ALLOWED_INSECURE":  "localhost:5000",
-    "PATH":                            "$HOME/.cargo/bin:$PATH"
+    "OTEL_TRACES_EXPORTER": "otlp",
+    "WASMCLOUD_VERSION": "1.8.0",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:4318",
+    "WASMCLOUD_OCI_ALLOWED_INSECURE": "localhost:5000",
+    "PATH": "$HOME/.cargo/bin:$PATH"
   },
   "shell": {
     "init_hook": [
@@ -32,9 +36,9 @@
       "lefthook install"
     ],
     "scripts": {
-      "services":            "process-compose",
+      "services": "process-compose",
       "webapp:schema:build": "cd ./crates/schemas/pipeline && cargo run > ../../../../../webapp/main/static/pipeline.schema.json && cd -",
-      "webapp:types:build":  "cd ./crates/shared/ && cargo test export_bindings && cp -r bindings/* ../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion=pipeline_version]/builder/types/ && cd -"
+      "webapp:types:build": "cd ./crates/shared/ && cargo test export_bindings && cp -r bindings/* ../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion=pipeline_version]/builder/types/ && cd -"
     }
   }
 }

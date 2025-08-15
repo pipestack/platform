@@ -3,9 +3,17 @@ incremental = true
 
 [workspace]
 members = [
-    "crates/nodes/*",
-    "crates/schemas/*",
-    "crates/services/*", "crates/shared",
+    "crates/nodes/customer",
+    "crates/nodes/in-http",
+    "crates/nodes/in-internal",
+    "crates/nodes/out",
+    "crates/nodes/out-http-webhook",
+    "crates/nodes/out-internal",
+    "crates/nodes/out-log",
+    "crates/schemas/pipeline",
+    "crates/services/infra_manager",
+    "crates/services/pipeline_manager",
+    "crates/shared",
 ]
 resolver = "3"
 
