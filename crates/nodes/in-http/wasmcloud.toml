@@ -1,4 +1,4 @@
-name = "in-http"
+name = "in_http"
 language = "rust"
 type = "component"
 

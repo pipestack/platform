@@ -1,4 +1,4 @@
-name = "out-log"
+name = "out_log"
 language = "rust"
 type = "component"
 
