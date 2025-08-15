@@ -1,3 +1,9 @@
+## 0.1.2 (2025-08-15)
+
+### Fixes
+
+- Use _ instead of - in wasmcloud.toml files
+
 ## 0.1.1 (2025-08-15)
 
 ### Fixes
