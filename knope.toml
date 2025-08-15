@@ -70,8 +70,7 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare release $version\""
-variables = { "$version" = "Version" }
+command = "git commit -m \"chore: prepare release\""
 
 [[workflows.steps]]
 type = "Command"
@@ -82,12 +81,10 @@ type = "CreatePullRequest"
 base = "main"
 
 [workflows.steps.title]
-template = "chore: prepare release $version"
-variables = { "$version" = "Version" }
+template = "chore: prepare release"
 
 [workflows.steps.body]
-template = "This PR was created by Knope. Merging it will create a new release\n\n$changelog"
-variables = { "$changelog" = "ChangelogEntry" }
+template = "This PR was created by Knope. Merging it will create a new release"
 
 [[workflows]]
 name = "release"
