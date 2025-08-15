@@ -46,18 +46,6 @@ scopes = ["pipeline"]
 changelog = "crates/schemas/pipeline/CHANGELOG.md"
 assets = "artifacts/*"
 
-[packages.infra_manager]
-versioned_files = ["crates/services/infra_manager/Cargo.toml", "Cargo.lock"]
-scopes = ["infra_manager"]
-changelog = "crates/services/infra_manager/CHANGELOG.md"
-assets = "artifacts/*"
-
-[packages.pipeline_manager]
-versioned_files = [{ path = "crates/schemas/pipeline/Cargo.toml", dependency = "pipeline_manager" }, "crates/services/pipeline_manager/Cargo.toml", "Cargo.lock"]
-scopes = ["pipeline_manager"]
-changelog = "crates/services/pipeline_manager/CHANGELOG.md"
-assets = "artifacts/*"
-
 [packages.shared]
 versioned_files = [{ path = "crates/nodes/in-http/Cargo.toml", dependency = "shared" }, { path = "crates/nodes/out-http-webhook/Cargo.toml", dependency = "shared" }, { path = "crates/schemas/pipeline/Cargo.toml", dependency = "shared" }, { path = "crates/services/pipeline_manager/Cargo.toml", dependency = "shared" }, "crates/shared/Cargo.toml", "Cargo.lock"]
 scopes = ["shared"]
