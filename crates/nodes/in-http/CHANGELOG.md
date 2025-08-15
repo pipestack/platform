@@ -1,3 +1,9 @@
+## 0.1.4 (2025-08-15)
+
+### Fixes
+
+- Add a bit more documentation
+
 ## 0.1.3 (2025-08-15)
 
 ### Fixes
