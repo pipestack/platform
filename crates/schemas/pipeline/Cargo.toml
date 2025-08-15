@@ -1,10 +1,10 @@
 [package]
 name = "pipeline"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
 pipeline_manager = { path = "../../services/pipeline_manager" }
 schemars.workspace = true
 serde_json.workspace = true
-shared = { path = "../../shared" }
+shared = { path = "../../shared" , version = "0.1.1" }
