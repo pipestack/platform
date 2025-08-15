@@ -1,7 +1,6 @@
 # Runs a wash command in all workspace members in crates/nodes/*
 wash-run-all command="build":
     #!/usr/bin/env bash
-    set -x
     for dir in crates/nodes/*/; do
         if [ -d "$dir" ]; then
             echo "👷 Running command '{{command}}' in $dir ..."
@@ -15,7 +14,6 @@ wash-run-all command="build":
 # Pushes all workspace members in crates/nodes/* to the registry
 wash-push-all: (wash-run-all "build")
     #!/usr/bin/env bash
-    set -x
     for dir in crates/nodes/*/; do
         if [ -d "$dir" ]; then
             crate_name=$(basename "$dir")
@@ -34,7 +32,6 @@ wash-push-all: (wash-run-all "build")
 # Runs a wash command in a workspace member in crates/nodes/*
 wash-run-one node command="build":
     #!/usr/bin/env bash
-    set -x
     if [ -d "crates/nodes/{{node}}" ]; then
         echo "👷 Running command '{{command}}' in {{node}} ..."
         cd "crates/nodes/{{node}}"
@@ -46,7 +43,6 @@ wash-run-one node command="build":
 # Pushes a workspace member in crates/nodes/* to the registry
 wash-push-one node: (wash-run-one node "build")
     #!/usr/bin/env bash
-    set -x
     if [ -d "crates/nodes/{{node}}" ]; then
         crate_name=$(basename "{{node}}")
         if [ "$crate_name" = "customer" ] || [ "$crate_name" = "out" ]; then
@@ -63,7 +59,6 @@ wash-push-one node: (wash-run-one node "build")
 # Deploys an example from `examples/*`. Pass the example ID, e.g. 01 or 02, as a parameter
 wash-deploy-example example: (wash-run-all "build")
     #!/usr/bin/env bash
-    set -x
     example_dir="examples/{{example}}*"
     found_dir=""
 

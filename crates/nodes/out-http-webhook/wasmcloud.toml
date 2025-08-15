@@ -1,4 +1,4 @@
-name = "out-http-webhook"
+name = "out_http_webhook"
 language = "rust"
 type = "component"
 

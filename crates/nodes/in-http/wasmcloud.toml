@@ -1,5 +1,4 @@
-name = "in-http"
-version = "0.1.0"
+name = "in_http"
 language = "rust"
 type = "component"
 

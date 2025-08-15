@@ -1,4 +1,4 @@
-name = "out-internal"
+name = "out_internal"
 language = "rust"
 type = "component"
 
