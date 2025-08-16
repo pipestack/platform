@@ -54,7 +54,8 @@ jobs:
       - run: |
           pwd
           ls -ltra
-      - run: knope release
+          tree ./artifacts
+      - run: knope release -v
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
