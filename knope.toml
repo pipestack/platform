@@ -2,31 +2,31 @@
 versioned_files = ["crates/nodes/in-http/Cargo.toml", "Cargo.lock"]
 scopes = ["in-http"]
 changelog = "crates/nodes/in-http/CHANGELOG.md"
-assets = "artifacts/in-http/build/*"
+assets = "artifacts/in_http_s.wasm"
 
 [packages.in-internal]
 versioned_files = ["crates/nodes/in-internal/Cargo.toml", "Cargo.lock"]
 scopes = ["in-internal"]
 changelog = "crates/nodes/in-internal/CHANGELOG.md"
-assets = "artifacts/in-internal/build/*"
+assets = "artifacts/in_internal_s.wasm"
 
 [packages.out-http-webhook]
 versioned_files = ["crates/nodes/out-http-webhook/Cargo.toml", "Cargo.lock"]
 scopes = ["out-http-webhook"]
 changelog = "crates/nodes/out-http-webhook/CHANGELOG.md"
-assets = "artifacts/out-http-webhook/build/*"
+assets = "artifacts/out_http_webhook_s.wasm"
 
 [packages.out-internal]
 versioned_files = ["crates/nodes/out-internal/Cargo.toml", "Cargo.lock"]
 scopes = ["out-internal"]
 changelog = "crates/nodes/out-internal/CHANGELOG.md"
-assets = "artifacts/out-internal/build/*"
+assets = "artifacts/out_internal_s.wasm"
 
 [packages.out-log]
 versioned_files = ["crates/nodes/out-log/Cargo.toml", "Cargo.lock"]
 scopes = ["out-log"]
 changelog = "crates/nodes/out-log/CHANGELOG.md"
-assets = "artifacts/out-log/build/*"
+assets = "artifacts/out_log_s.wasm"
 
 [packages.shared]
 versioned_files = [{ path = "crates/nodes/in-http/Cargo.toml", dependency = "shared" }, { path = "crates/nodes/out-http-webhook/Cargo.toml", dependency = "shared" }, { path = "crates/schemas/pipeline/Cargo.toml", dependency = "shared" }, { path = "crates/services/pipeline_manager/Cargo.toml", dependency = "shared" }, "crates/shared/Cargo.toml", "Cargo.lock"]
