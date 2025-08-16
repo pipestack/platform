@@ -32,16 +32,16 @@ jobs:
       - name: Build WebAssembly components
         run: devbox run just wash-run-all build
         
-      - name: Prepare assets
+      - name: Prepare artifacts
         run: |
-          mkdir ./assets
-          find ./crates/nodes -name "*_s.wasm" -path "*/build/*" -exec cp {} ./assets \;
+          mkdir ./artifacts
+          find ./crates/nodes -name "*_s.wasm" -path "*/build/*" -exec cp {} ./artifacts \;
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.6.0
         with:
           name: wasm-components
-          path: ./assets/*_s.wasm
+          path: ./artifacts/*_s.wasm
           if-no-files-found: error
 
   release:
