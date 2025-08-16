@@ -2696,7 +2696,7 @@ dependencies = [
 
 [[package]]
 name = "in-http"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "shared",
  "wasmcloud-component",
