@@ -8,7 +8,7 @@
 versioned_files = ["crates/nodes/in-http/Cargo.toml", "Cargo.lock"]
 scopes = ["in-http"]
 changelog = "crates/nodes/in-http/CHANGELOG.md"
-assets = "artifacts/in-http/build/*"
+assets = "in-http/build/*"
 
 # [packages.in-internal]
 # versioned_files = ["crates/nodes/in-internal/Cargo.toml", "Cargo.lock"]
