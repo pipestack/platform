@@ -35,7 +35,7 @@ jobs:
       - name: Prepare assets
         run: |
           mkdir ./assets
-          find . -name "*_s.wasm" -path "crates/nodes/*/build/*" -exec cp {} ./assets \;
+          find ./crates/nodes -name "*_s.wasm" -path "*/build/*" -exec cp {} ./assets \;
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.6.0
