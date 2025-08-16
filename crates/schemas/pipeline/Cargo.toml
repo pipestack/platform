@@ -7,4 +7,4 @@ edition = "2024"
 pipeline_manager = { path = "../../services/pipeline_manager" }
 schemars.workspace = true
 serde_json.workspace = true
-shared = { path = "../../shared" , version = "0.1.2" }
+shared = { path = "../../shared" , version = "0.1.3" }

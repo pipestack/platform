@@ -1,12 +1,12 @@
 [package]
 name = "in-http"
 edition = "2024"
-version = "0.1.2"
+version = "0.1.3"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-shared = { path = "../../shared" , version = "0.1.2" }
+shared = { path = "../../shared" , version = "0.1.3" }
 wasmcloud-component.workspace = true
 wit-bindgen.workspace = true
