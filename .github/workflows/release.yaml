@@ -48,8 +48,6 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - run: |
-          find . -name "*_s.wasm" -path "*/build/*" -exec mv {} . \;
       - uses: knope-dev/action@v2.1.0
         with:
           version: 0.21.2 # Also update config/devbox/flakes/knope/flake.nix and .github/workflows/prepare-release.yaml
