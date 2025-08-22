@@ -12,8 +12,8 @@ pub struct Cloudflare {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Nats {
     pub cluster_uris: String,
-    pub jwt: String,
-    pub nkey: String,
+    pub jwt: Option<String>,
+    pub nkey: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -35,6 +35,7 @@ impl Settings {
             .add_source(Environment::with_prefix("pipestack").separator("__"))
             .build()?;
         let settings: Settings = s.try_deserialize()?;
+        tracing::debug!("Loaded settings: {:?}", settings);
         Ok(settings)
     }
 }
