@@ -12,6 +12,8 @@ pub struct Cloudflare {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Nats {
     pub cluster_uris: String,
+    pub jwt: String,
+    pub nkey: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]

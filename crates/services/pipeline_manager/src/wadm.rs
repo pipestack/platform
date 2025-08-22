@@ -114,8 +114,8 @@ pub async fn deploy_providers_to_wasm_cloud(
         wadm_client::ClientConnectOptions {
             ca_path: None,
             creds_path: None,
-            jwt: None,
-            seed: None,
+            jwt: Some(settings.nats.jwt.clone()),
+            seed: Some(settings.nats.nkey.clone()),
             url: Some(settings.nats.cluster_uris.clone()),
         },
     )
