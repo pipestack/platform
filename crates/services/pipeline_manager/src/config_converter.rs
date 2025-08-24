@@ -283,7 +283,10 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
             && !depends_on.is_empty()
             && let Some(&depth) = node_depths.get(&step.name)
         {
-            let topic = format!("{}-{}-step-{}-in", workspace_slug, pipeline.name, depth);
+            let topic = format!(
+                "pipestack.{}.{}.step-{}-in",
+                workspace_slug, pipeline.name, depth
+            );
             step_topics.insert(step.name.clone(), topic);
         }
     }
@@ -300,7 +303,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
         "description".to_string(),
         format!("Shared providers for the {workspace_slug} workspace"),
     );
-    annotations.insert("version".to_string(), "0.4.0".to_string());
+    annotations.insert("version".to_string(), "0.8.0".to_string());
 
     let mut components = Vec::new();
 

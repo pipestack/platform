@@ -25,6 +25,18 @@ impl ProviderBuilder for NatsMessagingProviderBuilder {
                             "cluster_uris".to_string(),
                             serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
                         );
+                        if let Some(jwt) = &settings.nats.jwt {
+                            props.insert(
+                                "client_jwt".to_string(),
+                                serde_yaml::Value::String(jwt.clone()),
+                            );
+                        }
+                        if let Some(seed) = &settings.nats.nkey {
+                            props.insert(
+                                "client_seed".to_string(),
+                                serde_yaml::Value::String(seed.clone()),
+                            );
+                        }
                         props
                     },
                 }]),
