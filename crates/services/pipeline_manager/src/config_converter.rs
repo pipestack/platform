@@ -397,7 +397,7 @@ spec:
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
         properties:
-          next-step-topic: default-mine-step-2-in
+          next-step-topic: pipestack.default.mine.step-2-in
     traits:
     - type: spreadscaler
       properties:
@@ -452,7 +452,7 @@ spec:
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
         properties:
-          next-step-topic: default-mine-step-3-in
+          next-step-topic: pipestack.default.mine.step-3-in
     traits:
     - type: spreadscaler
       properties:
@@ -537,7 +537,7 @@ spec:
           config:
           - name: subscription-1-config-v1
             properties:
-              subscriptions: default-mine-step-2-in
+              subscriptions: pipestack.default.mine.step-2-in
               cluster_uris: localhost:4222
         target:
           name: in-internal-for-processor-wasm_18
@@ -552,7 +552,7 @@ spec:
           config:
           - name: subscription-2-config-v1
             properties:
-              subscriptions: default-mine-step-3-in
+              subscriptions: pipestack.default.mine.step-3-in
               cluster_uris: localhost:4222
         target:
           name: in-internal-for-out-log_19
@@ -646,7 +646,7 @@ spec:
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
         properties:
-          next-step-topic: default-mine-step-2-in
+          next-step-topic: pipestack.default.mine.step-2-in
     traits:
     - type: spreadscaler
       properties:
@@ -701,7 +701,7 @@ spec:
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
         properties:
-          next-step-topic: default-mine-step-3-in
+          next-step-topic: pipestack.default.mine.step-3-in
     traits:
     - type: spreadscaler
       properties:
@@ -820,7 +820,7 @@ spec:
           config:
           - name: subscription-1-config-v1
             properties:
-              subscriptions: default-mine-step-2-in
+              subscriptions: pipestack.default.mine.step-2-in
               cluster_uris: localhost:4222
         target:
           name: in-internal-for-processor-wasm_18
@@ -835,7 +835,7 @@ spec:
           config:
           - name: subscription-2-config-v1
             properties:
-              subscriptions: default-mine-step-3-in
+              subscriptions: pipestack.default.mine.step-3-in
               cluster_uris: localhost:4222
         target:
           name: in-internal-for-out-log_19
@@ -850,7 +850,7 @@ spec:
           config:
           - name: subscription-3-config-v1
             properties:
-              subscriptions: default-mine-step-3-in
+              subscriptions: pipestack.default.mine.step-3-in
               cluster_uris: localhost:4222
         target:
           name: in-internal-for-out-log_20
@@ -888,6 +888,8 @@ spec:
             },
             nats: crate::settings::Nats {
                 cluster_uris: "nats://localhost:4222".to_string(),
+                jwt: Some("test-jwt".to_string()),
+                nkey: Some("test-nkey".to_string()),
             },
             registry: crate::settings::Registry {
                 url: "http://localhost:8080".to_string(),
@@ -933,6 +935,8 @@ spec:
             },
             nats: crate::settings::Nats {
                 cluster_uris: "nats://localhost:4222".to_string(),
+                jwt: Some("test-jwt".to_string()),
+                nkey: Some("test-nkey".to_string()),
             },
             registry: crate::settings::Registry {
                 url: "http://localhost:8080".to_string(),
@@ -981,6 +985,8 @@ spec:
             },
             nats: crate::settings::Nats {
                 cluster_uris: "nats://localhost:4222".to_string(),
+                jwt: Some("test-jwt".to_string()),
+                nkey: Some("test-nkey".to_string()),
             },
             registry: crate::settings::Registry {
                 url: "http://localhost:8080".to_string(),
