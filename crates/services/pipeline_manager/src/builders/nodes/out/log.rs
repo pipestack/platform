@@ -32,7 +32,7 @@ impl ComponentBuilder for OutLogBuilder {
             traits: vec![
                 Trait {
                     trait_type: "spreadscaler".to_string(),
-                    properties: TraitProperties::Spreadscaler { instances: 1 },
+                    properties: TraitProperties::Spreadscaler { instances: 10_000 },
                 },
                 Trait {
                     trait_type: "link".to_string(),
@@ -80,7 +80,7 @@ impl ComponentBuilder for OutLogBuilder {
             traits: vec![Trait {
                 trait_type: "spreadscaler".to_string(),
                 properties: TraitProperties::Spreadscaler {
-                    instances: step.instances.unwrap_or(1),
+                    instances: step.instances.unwrap_or(10_000),
                 },
             }],
         });

@@ -352,7 +352,7 @@ nodes:
       x: 548
       'y': 69
     source: localhost:5000/pipestack/data-processor:0.0.1
-    instances: 1
+    instances: 10000
     depends_on:
       - in-http-webhook_17
   - name: out-log_19
@@ -380,7 +380,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: pipestack
@@ -401,7 +401,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: wasmcloud
@@ -418,7 +418,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: pipestack
@@ -443,7 +443,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
@@ -456,7 +456,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: wasmcloud
@@ -473,7 +473,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: wasmcloud
@@ -498,7 +498,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
   - name: httpserver
     type: capability
     properties:
@@ -594,7 +594,7 @@ nodes:
       x: 548
       'y': 69
     source: localhost:5000/pipestack/data-processor:0.0.1
-    instances: 1
+    instances: 10000
     depends_on:
       - in-http-webhook_17
   - name: out-log_19
@@ -629,7 +629,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: pipestack
@@ -650,7 +650,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: wasmcloud
@@ -667,7 +667,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: pipestack
@@ -692,7 +692,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
@@ -705,7 +705,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: wasmcloud
@@ -722,7 +722,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: wasmcloud
@@ -747,7 +747,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
   - name: in-internal-for-out-log_20
     type: component
     properties:
@@ -756,7 +756,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
     - type: link
       properties:
         namespace: wasmcloud
@@ -781,7 +781,7 @@ spec:
     traits:
     - type: spreadscaler
       properties:
-        instances: 1
+        instances: 10000
   - name: httpserver
     type: capability
     properties:
