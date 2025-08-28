@@ -173,6 +173,54 @@
         }
       }
     },
+    "nsc@latest": {
+      "last_modified": "2025-07-28T17:09:23Z",
+      "resolved": "github:NixOS/nixpkgs/648f70160c03151bc2121d179291337ad6bc564b#nsc",
+      "source": "devbox-search",
+      "version": "2.11.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/vnpj1r4vfjk72c2clhassxpj6wknna5s-nsc-2.11.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/vnpj1r4vfjk72c2clhassxpj6wknna5s-nsc-2.11.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/54vnxij9nhpgac78i59720xz2x98999d-nsc-2.11.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/54vnxij9nhpgac78i59720xz2x98999d-nsc-2.11.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/dkrfdga5cc9mdn00adhyh1166pq6c3dh-nsc-2.11.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/dkrfdga5cc9mdn00adhyh1166pq6c3dh-nsc-2.11.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/3f3f1j19wzy7z2l2clyffzx06r5swww3-nsc-2.11.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/3f3f1j19wzy7z2l2clyffzx06r5swww3-nsc-2.11.0"
+        }
+      }
+    },
     "openssl.dev": {
       "resolved": "github:NixOS/nixpkgs/fa0ef8a6bb1651aa26c939aeb51b5f499e86b0ec?narHash=sha256-2Kp9St3Pbsmu%2BxMsobLcgzzUxPvZR7alVJWyuk2BAPc%3D#openssl.dev",
       "source": "nixpkg",
