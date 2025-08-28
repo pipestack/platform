@@ -1,0 +1,131 @@
+name: Publish Nodes
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to publish (e.g., v1.0.0)"
+        required: true
+        type: string
+      release_id:
+        description: "Release ID (will be auto-detected if not provided)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-wasm-components:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install wash CLI
+        run: |
+          curl -s https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh | sudo bash
+          sudo apt install wash
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release info
+        id: get-release
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Triggered by release event
+            echo "release_id=${{ github.event.release.id }}" >> $GITHUB_OUTPUT
+            tag_name="${{ github.event.release.tag_name }}"
+          else
+            # Triggered manually via workflow_dispatch
+            if [ -n "${{ inputs.release_id }}" ]; then
+              release_id="${{ inputs.release_id }}"
+            else
+              # Find release by tag
+              release_id=$(gh api \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                /repos/${{ github.repository }}/releases/tags/${{ inputs.release_tag }} \
+                --jq '.id')
+            fi
+            echo "release_id=$release_id" >> $GITHUB_OUTPUT
+            tag_name="${{ inputs.release_tag }}"
+          fi
+          echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+          echo "tag_version=${tag_name##*/v}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release assets
+        id: get-assets
+        run: |
+          # Get all WASM assets from the release
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/releases/${{ steps.get-release.outputs.release_id }}/assets \
+            --jq '.[] | select(.name | endswith(".wasm")) | {name: .name, url: .browser_download_url}' \
+            > wasm_assets.json
+
+          echo "Found WASM assets:"
+          cat wasm_assets.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download and publish WASM components
+        run: |
+          # Process each WASM asset
+          while read -r asset; do
+            name=$(echo "$asset" | jq -r '.name')
+            url=$(echo "$asset" | jq -r '.url')
+            
+            echo "Processing $name from $url"
+            
+            # Download the WASM file
+            gh release download ${{ steps.get-release.outputs.tag_name }} --pattern "*.wasm"
+            
+            # Extract component name (remove _s.wasm suffix)
+            component_name=${name%_s.wasm}
+            
+            # Build and push the container image
+            image_name="ghcr.io/${{ github.repository_owner }}/nodes/$component_name"
+            version="${{ steps.get-release.outputs.tag_version }}"
+
+            echo "Pushing image: $image_name:$version"
+            wash push "$image_name:$version" "$name"
+            
+          done < <(cat wasm_assets.json | jq -c '.')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WASH_REG_USER: ${{ github.repository_owner }}
+          WASH_REG_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Published WASM Components 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following WASM components have been published to ghcr.io:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          while read -r asset; do
+            name=$(echo "$asset" | jq -r '.name')
+            component_name=${name%_s.wasm}
+            image_name="ghcr.io/${{ github.repository_owner }}/node-$component_name"
+            
+            echo "- \`$image_name:${{ steps.get-release.outputs.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          done < <(cat wasm_assets.json | jq -c '.')
+
+          echo "You can use these images in your `wadm.yaml` with:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "TBD" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
