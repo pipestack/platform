@@ -3,29 +3,8 @@ wash-run-all command="build":
     #!/usr/bin/env bash
     for dir in crates/nodes/*/; do
         if [ -d "$dir" ]; then
-            echo "👷 Running command '{{command}}' in $dir ..."
-            cd "$dir"
-            wash wit deps
-            wash {{command}}
-            cd - > /dev/null
-        fi
-    done
-
-# Pushes all workspace members in crates/nodes/* to the registry
-wash-push-all: (wash-run-all "build")
-    #!/usr/bin/env bash
-    for dir in crates/nodes/*/; do
-        if [ -d "$dir" ]; then
             crate_name=$(basename "$dir")
-            if [ "$crate_name" = "customer" ] || [ "$crate_name" = "out" ]; then
-                echo "⏭️  Skipping excluded crate: $crate_name"
-                continue
-            fi
-            wasm_file="${crate_name//-/_}_s.wasm"
-            echo "📦 Pushing $crate_name to registry..."
-            cd "$dir"
-            wash push --insecure localhost:5000/pipestack/${crate_name}:0.0.1 ./build/${wasm_file}
-            cd - > /dev/null
+            just wash-run-one ${crate_name} {{command}}
         fi
     done
 
@@ -40,6 +19,16 @@ wash-run-one node command="build":
         cd - > /dev/null
     fi
 
+# Pushes all workspace members in crates/nodes/* to the registry
+wash-push-all:
+    #!/usr/bin/env bash
+    for dir in crates/nodes/*/; do
+        if [ -d "$dir" ]; then
+            crate_name=$(basename "$dir")
+            just wash-push-one ${crate_name}
+        fi
+    done
+
 # Pushes a workspace member in crates/nodes/* to the registry
 wash-push-one node: (wash-run-one node "build")
     #!/usr/bin/env bash
@@ -52,7 +41,8 @@ wash-push-one node: (wash-run-one node "build")
         wasm_file="${crate_name//-/_}_s.wasm"
         echo "📦 Pushing $crate_name to registry..."
         cd "crates/nodes/{{node}}"
-        wash push --insecure localhost:5000/pipestack/${crate_name}:0.0.1 ./build/${wasm_file}
+        version=$(grep '^version' Cargo.toml | cut -d'"' -f2)
+        wash push --insecure localhost:5000/nodes/${crate_name}:${version} ./build/${wasm_file}
         cd - > /dev/null
     fi
 

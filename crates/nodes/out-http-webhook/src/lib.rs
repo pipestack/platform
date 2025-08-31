@@ -1,18 +1,24 @@
-use crate::exports::pipestack::out::out::Guest;
-use crate::wasi::http::types::Fields;
+use bindings::exports::pipestack::out::out::Guest;
+use bindings::wasi::http::types::Fields;
 use shared::{FromConfig, OutHttpWebhookSettings};
 use wasmcloud_component::{error, info};
 
-wit_bindgen::generate!({ generate_all });
+mod bindings {
+    use super::Component;
+    wit_bindgen::generate!({ generate_all });
+    export!(Component);
+}
 
 struct Component;
 
+const LOG_CONTEXT: &str = "out-http-webhook";
+
 impl Guest for Component {
     fn run(input: String) -> String {
-        let config = match wasi::config::runtime::get("json") {
+        let config = match bindings::wasi::config::runtime::get("json") {
             Ok(config) => config,
             Err(e) => {
-                error!("Failed to get config: {e:?}");
+                error!(context: LOG_CONTEXT, "Failed to get config: {e:?}");
                 return format!("Failed to get config: {e:?}");
             }
         };
@@ -20,7 +26,7 @@ impl Guest for Component {
         let settings = match OutHttpWebhookSettings::from_config(config) {
             Ok(settings) => settings,
             Err(e) => {
-                error!("Failed to parse config: {e}");
+                error!(context: LOG_CONTEXT, "Failed to parse config: {e}");
                 return format!("Failed to parse config: {e}");
             }
         };
@@ -40,7 +46,7 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
             fields
                 .set(&header.key, &[header.value.as_bytes().to_vec()])
                 .unwrap_or_else(|e| {
-                    error!("Failed to set header {}: {}", header.key, e);
+                    error!(context: LOG_CONTEXT, "Failed to set header {}: {}", header.key, e);
                 });
         }
     }
@@ -58,7 +64,7 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
                     fields
                         .set(&auth.config.name, &[auth_value.as_bytes().to_vec()])
                         .unwrap_or_else(|e| {
-                            error!("Failed to set auth header {}: {}", auth.config.name, e);
+                            error!(context: LOG_CONTEXT, "Failed to set auth header {}: {}", auth.config.name, e);
                         });
                 }
                 // Query string auth will be handled when constructing the URL
@@ -68,7 +74,7 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
                 fields
                     .set("Authorization", &[bearer_value.as_bytes().to_vec()])
                     .unwrap_or_else(|e| {
-                        error!("Failed to set Bearer authorization header: {}", e);
+                        error!(context: LOG_CONTEXT, "Failed to set Bearer authorization header: {}", e);
                     });
             }
             "basic" => {
@@ -76,33 +82,33 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
                 fields
                     .set("Authorization", &[basic_value.as_bytes().to_vec()])
                     .unwrap_or_else(|e| {
-                        error!("Failed to set Basic authorization header: {}", e);
+                        error!(context: LOG_CONTEXT, "Failed to set Basic authorization header: {}", e);
                     });
             }
             _ => {
-                error!("Unsupported authentication type: {}", auth.auth_type);
+                error!(context: LOG_CONTEXT, "Unsupported authentication type: {}", auth.auth_type);
             }
         }
     }
 
     let method = match settings.method.as_str() {
-        "GET" => wasi::http::types::Method::Get,
-        "POST" => wasi::http::types::Method::Post,
-        "PUT" => wasi::http::types::Method::Put,
-        "PATCH" => wasi::http::types::Method::Patch,
-        "DELETE" => wasi::http::types::Method::Delete,
-        "HEAD" => wasi::http::types::Method::Head,
-        "OPTIONS" => wasi::http::types::Method::Options,
-        _ => wasi::http::types::Method::Get,
+        "GET" => bindings::wasi::http::types::Method::Get,
+        "POST" => bindings::wasi::http::types::Method::Post,
+        "PUT" => bindings::wasi::http::types::Method::Put,
+        "PATCH" => bindings::wasi::http::types::Method::Patch,
+        "DELETE" => bindings::wasi::http::types::Method::Delete,
+        "HEAD" => bindings::wasi::http::types::Method::Head,
+        "OPTIONS" => bindings::wasi::http::types::Method::Options,
+        _ => bindings::wasi::http::types::Method::Get,
     };
 
     // Parse the URL to extract scheme and authority
     let url_parts: Vec<&str> = settings.url.splitn(2, "://").collect();
     let (scheme, authority, mut path_with_query) = if url_parts.len() == 2 {
         let scheme = match url_parts[0] {
-            "https" => wasi::http::types::Scheme::Https,
-            "http" => wasi::http::types::Scheme::Http,
-            _ => wasi::http::types::Scheme::Https,
+            "https" => bindings::wasi::http::types::Scheme::Https,
+            "http" => bindings::wasi::http::types::Scheme::Http,
+            _ => bindings::wasi::http::types::Scheme::Https,
         };
         let remaining = url_parts[1];
         let authority_and_path: Vec<&str> = remaining.splitn(2, '/').collect();
@@ -115,7 +121,7 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
         (scheme, authority, path_with_query)
     } else {
         (
-            wasi::http::types::Scheme::Https,
+            bindings::wasi::http::types::Scheme::Https,
             settings.url.as_str(),
             "/".to_string(),
         )
@@ -140,9 +146,9 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
     // Set Content-Type header for methods that will have a body
     if matches!(
         method,
-        wasi::http::types::Method::Post
-            | wasi::http::types::Method::Put
-            | wasi::http::types::Method::Patch
+        bindings::wasi::http::types::Method::Post
+            | bindings::wasi::http::types::Method::Put
+            | bindings::wasi::http::types::Method::Patch
     ) {
         // Set Content-Type header from settings, defaulting to application/json
         let content_type = settings
@@ -156,7 +162,7 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
             });
     }
 
-    let req = wasi::http::outgoing_handler::OutgoingRequest::new(fields);
+    let req = bindings::wasi::http::outgoing_handler::OutgoingRequest::new(fields);
     req.set_method(&method).unwrap();
     req.set_scheme(Some(&scheme)).unwrap();
     req.set_authority(Some(authority)).unwrap();
@@ -166,9 +172,9 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
     // Add request body for methods that support it
     if matches!(
         method,
-        wasi::http::types::Method::Post
-            | wasi::http::types::Method::Put
-            | wasi::http::types::Method::Patch
+        bindings::wasi::http::types::Method::Post
+            | bindings::wasi::http::types::Method::Put
+            | bindings::wasi::http::types::Method::Patch
     ) {
         let body = req.body().unwrap();
         let output_stream = body.write().unwrap();
@@ -178,14 +184,14 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
         output_stream
             .blocking_write_and_flush(payload.as_bytes())
             .unwrap_or_else(|e| {
-                error!("Failed to write request body: {}", e);
+                error!(context: LOG_CONTEXT, "Failed to write request body: {}", e);
             });
 
         drop(output_stream);
     }
 
     // Perform the HTTP request
-    let _ = match wasi::http::outgoing_handler::handle(req, None) {
+    let _ = match bindings::wasi::http::outgoing_handler::handle(req, None) {
         Ok(resp) => {
             resp.subscribe().block();
             let response = resp
@@ -210,7 +216,7 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
                 }
 
                 let body_string = String::from_utf8_lossy(&body_content);
-                info!(
+                info!(context: LOG_CONTEXT,
                     "Response status code: {}. Body: {}",
                     response.status(),
                     body_string
@@ -230,5 +236,3 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
 
     Ok("Done".into())
 }
-
-export!(Component);

@@ -1,15 +1,21 @@
-use crate::exports::pipestack::out::out::Guest;
+use bindings::exports::pipestack::out::out::Guest;
 
-use wasi::logging::logging::{Level, log};
-use wasmcloud::messaging::{consumer, types};
+use bindings::wasmcloud::messaging::{consumer, types};
+use wasmcloud_component::{error, info};
 
-wit_bindgen::generate!({ generate_all });
+mod bindings {
+    use super::Component;
+    wit_bindgen::generate!({ generate_all });
+    export!(Component);
+}
 
 struct Component;
 
+const LOG_CONTEXT: &str = "out-internal";
+
 impl Guest for Component {
     fn run(input: String) -> String {
-        let subject = wasi::config::runtime::get("next-step-topic")
+        let subject = bindings::wasi::config::runtime::get("next-step-topic")
             .expect("Unable to fetch value")
             .unwrap_or_else(|| "config value not set".to_string());
 
@@ -18,20 +24,11 @@ impl Guest for Component {
             reply_to: None,
             body: input.into_bytes(),
         }) {
-            log(
-                Level::Error,
-                "in-http",
-                format!("Failed to publish message: {err:?}").as_str(),
-            );
+            error!(context: LOG_CONTEXT, "Failed to publish message: {err:?}");
+        } else {
+            info!(context: LOG_CONTEXT, "Successfully posted a message to subject: {subject:?}");
         }
-        log(
-            Level::Info,
-            "in-http",
-            format!("Successfully posted a message with subject: {subject:?}").as_str(),
-        );
 
         "Done".to_string()
     }
 }
-
-export!(Component);

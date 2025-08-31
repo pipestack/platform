@@ -1,15 +1,19 @@
-use crate::exports::pipestack::out::out::Guest;
+use bindings::exports::pipestack::out::out::Guest;
 use wasmcloud_component::info;
 
-wit_bindgen::generate!({ generate_all });
+mod bindings {
+    use super::Component;
+    wit_bindgen::generate!({ generate_all });
+    export!(Component);
+}
 
 struct Component;
 
+const LOG_CONTEXT: &str = "out-internal";
+
 impl Guest for Component {
     fn run(input: String) -> String {
-        info!("Final log message: {input}");
+        info!(context: LOG_CONTEXT, "Final log message: {input}");
         String::from("Done")
     }
 }
-
-export!(Component);

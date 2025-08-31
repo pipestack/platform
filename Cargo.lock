@@ -3720,6 +3720,7 @@ dependencies = [
 name = "out-internal"
 version = "0.1.4"
 dependencies = [
+ "wasmcloud-component",
  "wit-bindgen 0.43.0",
 ]
 

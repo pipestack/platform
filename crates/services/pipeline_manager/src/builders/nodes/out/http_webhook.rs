@@ -1,6 +1,7 @@
 use crate::builders::{
     BuildContext, Component, ComponentBuilder, Config, LinkProperties, LinkTarget, Properties,
-    Trait, TraitProperties, settings_to_config_properties,
+    Trait, TraitProperties, nodes::NODE_VERSION_IN_INTERNAL, nodes::NODE_VERSION_OUT_HTTP_WEBHOOK,
+    settings_to_config_properties,
 };
 use shared::{PipelineNode, PipelineNodeSettings};
 
@@ -24,7 +25,7 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
                     context.workspace_slug, context.pipeline.name, step.name
                 )),
                 image: format!(
-                    "{}/pipestack/in-internal:0.0.1",
+                    "{}/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}",
                     context.settings.registry.url
                 ),
                 config: None,
@@ -75,7 +76,7 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
                     context.workspace_slug, context.pipeline.name, step.name
                 )),
                 image: format!(
-                    "{}/pipestack/out-http-webhook:0.0.1",
+                    "{}/nodes/out-http-webhook:{NODE_VERSION_OUT_HTTP_WEBHOOK}",
                     context.settings.registry.url
                 ),
                 config: step.settings.as_ref().map(|s| match s {

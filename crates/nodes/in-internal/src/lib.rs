@@ -1,17 +1,19 @@
+use bindings::{exports::wasmcloud::messaging, wasmcloud::messaging::types::BrokerMessage};
+use wasmcloud_component::info;
+
 mod bindings {
-    use crate::WitComponent;
+    use super::WitComponent;
     wit_bindgen::generate!({ generate_all });
     export!(WitComponent);
 }
 
 struct WitComponent;
 
-use bindings::{exports::wasmcloud::messaging, wasmcloud::messaging::types::BrokerMessage};
-use wasmcloud_component::info;
+const LOG_CONTEXT: &str = "in-http";
 
 impl messaging::handler::Guest for WitComponent {
     fn handle_message(msg: BrokerMessage) -> Result<(), String> {
-        info!(
+        info!(context: LOG_CONTEXT,
             "Message received in in-internal: {:?}",
             String::from_utf8(msg.body.clone())
         );
@@ -27,9 +29,9 @@ impl messaging::handler::Guest for WitComponent {
             Err(_) => String::from_utf8(msg.body.clone()).unwrap(),
         };
 
-        info!("Calling out");
+        info!(context: LOG_CONTEXT,"Calling out");
         let received = bindings::pipestack::out::out::run(response_from_custom_code.as_str());
-        info!("Called out. Return value: {received}");
+        info!(context: LOG_CONTEXT,"Called out. Return value: {received}");
         Ok(())
     }
 }

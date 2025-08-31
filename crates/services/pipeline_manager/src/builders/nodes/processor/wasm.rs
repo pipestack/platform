@@ -1,6 +1,6 @@
 use crate::builders::{
     BuildContext, Component, ComponentBuilder, Config, LinkProperties, LinkTarget, Properties,
-    Trait, TraitProperties,
+    Trait, TraitProperties, nodes::NODE_VERSION_IN_INTERNAL, nodes::NODE_VERSION_OUT_INTERNAL,
 };
 use shared::PipelineNode;
 
@@ -24,7 +24,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                     context.workspace_slug, context.pipeline.name, step.name
                 )),
                 image: format!(
-                    "{}/pipestack/in-internal:0.0.1",
+                    "{}/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}",
                     context.settings.registry.url
                 ),
                 config: None,
@@ -105,7 +105,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                         context.workspace_slug, context.pipeline.name, step.name
                     )),
                     image: format!(
-                        "{}/pipestack/out-internal:0.0.1",
+                        "{}/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}",
                         context.settings.registry.url
                     ),
                     config: Some(vec![Config {
