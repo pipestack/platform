@@ -334,6 +334,10 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::builders::nodes::{
+        NODE_VERSION_IN_HTTP, NODE_VERSION_IN_INTERNAL, NODE_VERSION_OUT_INTERNAL,
+        NODE_VERSION_OUT_LOG,
+    };
 
     #[test]
     fn test_convert_pipeline_in_processor_out() {
@@ -351,7 +355,7 @@ nodes:
     position:
       x: 548
       'y': 69
-    source: localhost:5000/pipestack/data-processor:0.0.1
+    source: localhost:5000/nodes/data-processor:0.0.1
     instances: 10000
     depends_on:
       - in-http-webhook_17
@@ -364,7 +368,8 @@ nodes:
       - processor-wasm_18
 "#;
 
-        let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
+        let expected_yaml = format!(
+            r#"apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
   name: default-mine
@@ -375,7 +380,7 @@ spec:
   - name: in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/pipestack/in-http:0.0.1
+      image: http://localhost:5000/nodes/in-http:{NODE_VERSION_IN_HTTP}
       id: default_mine-in-http-webhook_17
     traits:
     - type: spreadscaler
@@ -392,7 +397,7 @@ spec:
   - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
@@ -413,7 +418,7 @@ spec:
   - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
@@ -447,7 +452,7 @@ spec:
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
@@ -468,7 +473,7 @@ spec:
   - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: http://localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
@@ -493,7 +498,7 @@ spec:
   - name: out-log_19
     type: component
     properties:
-      image: http://localhost:5000/pipestack/out-log:0.0.1
+      image: http://localhost:5000/nodes/out-log:{NODE_VERSION_OUT_LOG}
       id: default_mine-out-log_19
     traits:
     - type: spreadscaler
@@ -557,7 +562,8 @@ spec:
         target:
           name: in-internal-for-out-log_19
         name: messaging-nats-to-default-in-internal-for-out-log_19-link
-"#;
+"#
+        );
 
         let settings = Settings::new().expect("Could not read config settings");
 
@@ -571,7 +577,7 @@ spec:
 
         // Parse expected output to same struct type
         let expected_wadm: WadmApplication =
-            serde_yaml::from_str(expected_yaml).expect("Failed to parse expected YAML");
+            serde_yaml::from_str(expected_yaml.as_str()).expect("Failed to parse expected YAML");
 
         // STRUCTURED COMPARISON - much more reliable!
         assert_eq!(actual_wadm, expected_wadm);
@@ -593,7 +599,7 @@ nodes:
     position:
       x: 548
       'y': 69
-    source: localhost:5000/pipestack/data-processor:0.0.1
+    source: localhost:5000/nodes/data-processor:0.0.1
     instances: 10000
     depends_on:
       - in-http-webhook_17
@@ -613,7 +619,8 @@ nodes:
       - processor-wasm_18
 "#;
 
-        let expected_yaml = r#"apiVersion: core.oam.dev/v1beta1
+        let expected_yaml = format!(
+            r#"apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
   name: default-mine
@@ -624,7 +631,7 @@ spec:
   - name: in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/pipestack/in-http:0.0.1
+      image: http://localhost:5000/nodes/in-http:{NODE_VERSION_IN_HTTP}
       id: default_mine-in-http-webhook_17
     traits:
     - type: spreadscaler
@@ -641,7 +648,7 @@ spec:
   - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
@@ -662,7 +669,7 @@ spec:
   - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
@@ -696,7 +703,7 @@ spec:
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/pipestack/out-internal:0.0.1
+      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
@@ -717,7 +724,7 @@ spec:
   - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: http://localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
@@ -742,7 +749,7 @@ spec:
   - name: out-log_19
     type: component
     properties:
-      image: http://localhost:5000/pipestack/out-log:0.0.1
+      image: http://localhost:5000/nodes/out-log:{NODE_VERSION_OUT_LOG}
       id: default_mine-out-log_19
     traits:
     - type: spreadscaler
@@ -751,7 +758,7 @@ spec:
   - name: in-internal-for-out-log_20
     type: component
     properties:
-      image: http://localhost:5000/pipestack/in-internal:0.0.1
+      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-out-log_20
     traits:
     - type: spreadscaler
@@ -776,7 +783,7 @@ spec:
   - name: out-log_20
     type: component
     properties:
-      image: http://localhost:5000/pipestack/out-log:0.0.1
+      image: http://localhost:5000/nodes/out-log:{NODE_VERSION_OUT_LOG}
       id: default_mine-out-log_20
     traits:
     - type: spreadscaler
@@ -855,7 +862,8 @@ spec:
         target:
           name: in-internal-for-out-log_20
         name: messaging-nats-to-default-in-internal-for-out-log_20-link
-"#;
+"#
+        );
 
         let settings = Settings::new().expect("Could not read config settings");
 
@@ -869,7 +877,7 @@ spec:
 
         // Parse expected output to same struct type
         let expected_wadm: WadmApplication =
-            serde_yaml::from_str(expected_yaml).expect("Failed to parse expected YAML");
+            serde_yaml::from_str(expected_yaml.as_str()).expect("Failed to parse expected YAML");
 
         // STRUCTURED COMPARISON - much more reliable!
         assert_eq!(actual_wadm, expected_wadm);
