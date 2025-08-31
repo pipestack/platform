@@ -1,3 +1,9 @@
+## 0.1.6 (2025-08-31)
+
+### Fixes
+
+- Standardized logging and bindings across all nodes
+
 ## 0.1.5 (2025-08-16)
 
 ### Fixes

@@ -1,3 +1,9 @@
+## 0.1.4 (2025-08-31)
+
+### Fixes
+
+- Standardized logging and bindings across all nodes
+
 ## 0.1.3 (2025-08-16)
 
 ### Fixes
