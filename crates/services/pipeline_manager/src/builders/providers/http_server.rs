@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::builders::{Component, Config, Properties, ProviderBuilder, Trait, TraitProperties};
-use crate::settings::Settings;
+use crate::config::AppConfig;
 
 pub struct HttpServerProviderBuilder;
 
@@ -9,7 +9,7 @@ impl ProviderBuilder for HttpServerProviderBuilder {
     fn build_component(
         &self,
         _workspace_slug: &str,
-        _settings: &Settings,
+        _app_config: &AppConfig,
     ) -> Result<Component, Box<dyn std::error::Error>> {
         let mut http_server_config_props = BTreeMap::new();
         http_server_config_props.insert(

@@ -1,5 +1,5 @@
 use crate::builders::{Component, Properties, ProviderBuilder, Trait, TraitProperties};
-use crate::settings::Settings;
+use crate::config::AppConfig;
 
 pub struct HttpClientProviderBuilder;
 
@@ -7,7 +7,7 @@ impl ProviderBuilder for HttpClientProviderBuilder {
     fn build_component(
         &self,
         _workspace_slug: &str,
-        _settings: &Settings,
+        _app_config: &AppConfig,
     ) -> Result<Component, Box<dyn std::error::Error>> {
         Ok(Component {
             name: "httpclient".to_string(),

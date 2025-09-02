@@ -6,18 +6,18 @@ use crate::builders::{
     Metadata, Properties, Spec, Trait, TraitProperties, WadmApplication,
     nodes::registry::ComponentBuilderRegistry, providers::ProviderBuilderRegistry,
 };
-use crate::settings::Settings;
+use crate::config::AppConfig;
 
 pub fn convert_pipeline(
     pipeline: &Pipeline,
     workspace_slug: &String,
-    settings: &Settings,
+    app_config: &AppConfig,
 ) -> Result<WadmApplication, Box<dyn std::error::Error>> {
     let mut components = Vec::new();
     let step_topics = determine_step_topics(pipeline, workspace_slug);
 
     // Create build context
-    let context = BuildContext::new(pipeline, workspace_slug, settings, &step_topics);
+    let context = BuildContext::new(pipeline, workspace_slug, app_config, &step_topics);
 
     // Create builder registry
     let registry = ComponentBuilderRegistry::new();
@@ -140,7 +140,7 @@ pub fn convert_pipeline(
                                 props.insert(
                                     "cluster_uris".to_string(),
                                     serde_yaml::Value::String(
-                                        settings.nats.cluster_uris.to_string(),
+                                        app_config.nats.cluster_uris.to_string(),
                                     ),
                                 );
                                 props
@@ -188,7 +188,7 @@ pub fn convert_pipeline(
                                 props.insert(
                                     "cluster_uris".to_string(),
                                     serde_yaml::Value::String(
-                                        settings.nats.cluster_uris.to_string(),
+                                        app_config.nats.cluster_uris.to_string(),
                                     ),
                                 );
                                 props
@@ -293,7 +293,7 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
     step_topics
 }
 
-pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmApplication {
+pub fn create_providers_wadm(workspace_slug: &str, app_config: &AppConfig) -> WadmApplication {
     let mut annotations = BTreeMap::new();
     annotations.insert(
         "experimental.wasmcloud.dev/shared".to_string(),
@@ -312,7 +312,7 @@ pub fn create_providers_wadm(workspace_slug: &str, settings: &Settings) -> WadmA
 
     // Build all provider components using the registry
     for provider_builder in registry.get_all_providers() {
-        match provider_builder.build_component(workspace_slug, settings) {
+        match provider_builder.build_component(workspace_slug, app_config) {
             Ok(component) => components.push(component),
             Err(e) => {
                 eprintln!("Failed to build provider component: {}", e);
@@ -565,14 +565,14 @@ spec:
 "#
         );
 
-        let settings = Settings::new().expect("Could not read config settings");
+        let app_config = AppConfig::new().expect("Could not read app config");
 
         // Parse input
         let pipeline: Pipeline =
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
         // Convert to WADM
-        let actual_wadm = convert_pipeline(&pipeline, &"default".to_string(), &settings)
+        let actual_wadm = convert_pipeline(&pipeline, &"default".to_string(), &app_config)
             .expect("Failed to convert pipeline");
 
         // Parse expected output to same struct type
@@ -865,14 +865,14 @@ spec:
 "#
         );
 
-        let settings = Settings::new().expect("Could not read config settings");
+        let app_config = AppConfig::new().expect("Could not read app config");
 
         // Parse input
         let pipeline: Pipeline =
             serde_yaml::from_str(input_yaml).expect("Failed to parse input YAML");
 
         // Convert to WADM
-        let actual_wadm = convert_pipeline(&pipeline, &"default".to_string(), &settings)
+        let actual_wadm = convert_pipeline(&pipeline, &"default".to_string(), &app_config)
             .expect("Failed to convert pipeline");
 
         // Parse expected output to same struct type
@@ -887,19 +887,19 @@ spec:
     fn test_provider_registry() {
         use crate::builders::providers::ProviderBuilderRegistry;
 
-        let settings = Settings {
-            cloudflare: crate::settings::Cloudflare {
+        let app_config = AppConfig {
+            cloudflare: crate::config::Cloudflare {
                 account_id: "test_account".to_string(),
                 r2_access_key_id: "test_key".to_string(),
                 r2_secret_access_key: "test_secret".to_string(),
                 r2_bucket: "test_bucket".to_string(),
             },
-            nats: crate::settings::Nats {
+            nats: crate::config::Nats {
                 cluster_uris: "nats://localhost:4222".to_string(),
                 jwt: Some("test-jwt".to_string()),
                 nkey: Some("test-nkey".to_string()),
             },
-            registry: crate::settings::Registry {
+            registry: crate::config::Registry {
                 url: "http://localhost:8080".to_string(),
             },
         };
@@ -910,7 +910,7 @@ spec:
         // Test that all providers can be built successfully
         let mut component_names = Vec::new();
         for provider_builder in registry.get_all_providers() {
-            match provider_builder.build_component(workspace_slug, &settings) {
+            match provider_builder.build_component(workspace_slug, &app_config) {
                 Ok(component) => {
                     component_names.push(component.name.clone());
                     // Verify component structure
@@ -934,24 +934,24 @@ spec:
 
     #[test]
     fn test_create_providers_wadm_uses_registry() {
-        let settings = Settings {
-            cloudflare: crate::settings::Cloudflare {
+        let app_config = AppConfig {
+            cloudflare: crate::config::Cloudflare {
                 account_id: "test_account".to_string(),
                 r2_access_key_id: "test_key".to_string(),
                 r2_secret_access_key: "test_secret".to_string(),
                 r2_bucket: "test_bucket".to_string(),
             },
-            nats: crate::settings::Nats {
+            nats: crate::config::Nats {
                 cluster_uris: "nats://localhost:4222".to_string(),
                 jwt: Some("test-jwt".to_string()),
                 nkey: Some("test-nkey".to_string()),
             },
-            registry: crate::settings::Registry {
+            registry: crate::config::Registry {
                 url: "http://localhost:8080".to_string(),
             },
         };
 
-        let wadm_app = create_providers_wadm("test-workspace", &settings);
+        let wadm_app = create_providers_wadm("test-workspace", &app_config);
 
         // Verify the application structure
         assert_eq!(wadm_app.api_version, "core.oam.dev/v1beta1");
@@ -984,19 +984,19 @@ spec:
     fn test_individual_provider_builders() {
         use crate::builders::{ProviderType, providers::ProviderBuilderRegistry};
 
-        let settings = Settings {
-            cloudflare: crate::settings::Cloudflare {
+        let app_config = AppConfig {
+            cloudflare: crate::config::Cloudflare {
                 account_id: "test_account".to_string(),
                 r2_access_key_id: "test_key".to_string(),
                 r2_secret_access_key: "test_secret".to_string(),
                 r2_bucket: "test_bucket".to_string(),
             },
-            nats: crate::settings::Nats {
+            nats: crate::config::Nats {
                 cluster_uris: "nats://localhost:4222".to_string(),
                 jwt: Some("test-jwt".to_string()),
                 nkey: Some("test-nkey".to_string()),
             },
-            registry: crate::settings::Registry {
+            registry: crate::config::Registry {
                 url: "http://localhost:8080".to_string(),
             },
         };
@@ -1007,21 +1007,21 @@ spec:
         // Test individual provider builders using the get_builder method
         if let Some(http_server_builder) = registry.get_builder(&ProviderType::HttpServer) {
             let component = http_server_builder
-                .build_component(workspace_slug, &settings)
+                .build_component(workspace_slug, &app_config)
                 .unwrap();
             assert_eq!(component.name, "httpserver");
         }
 
         if let Some(http_client_builder) = registry.get_builder(&ProviderType::HttpClient) {
             let component = http_client_builder
-                .build_component(workspace_slug, &settings)
+                .build_component(workspace_slug, &app_config)
                 .unwrap();
             assert_eq!(component.name, "httpclient");
         }
 
         if let Some(nats_builder) = registry.get_builder(&ProviderType::NatsMessaging) {
             let component = nats_builder
-                .build_component(workspace_slug, &settings)
+                .build_component(workspace_slug, &app_config)
                 .unwrap();
             assert_eq!(component.name, "messaging-nats");
         }

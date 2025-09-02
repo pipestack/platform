@@ -22,20 +22,20 @@ pub struct Registry {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct Settings {
+pub struct AppConfig {
     pub cloudflare: Cloudflare,
     pub nats: Nats,
     pub registry: Registry,
 }
 
-impl Settings {
+impl AppConfig {
     pub fn new() -> Result<Self, ConfigError> {
         let s = Config::builder()
             .add_source(File::with_name(".env.local").required(false))
             .add_source(Environment::with_prefix("pipestack").separator("__"))
             .build()?;
-        let settings: Settings = s.try_deserialize()?;
-        tracing::debug!("Loaded settings: {:?}", settings);
-        Ok(settings)
+        let app_config: AppConfig = s.try_deserialize()?;
+        tracing::debug!("Loaded app config: {:?}", app_config);
+        Ok(app_config)
     }
 }

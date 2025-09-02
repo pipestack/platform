@@ -1,16 +1,16 @@
 use axum::{Json, http::StatusCode};
 
-use crate::{DeployRequest, DeployResponse, config_converter, settings::Settings};
+use crate::{DeployRequest, DeployResponse, config::AppConfig, config_converter};
 
 pub async fn deploy_pipeline_to_wasm_cloud(
     payload: &DeployRequest,
-    settings: &Settings,
+    app_config: &AppConfig,
 ) -> (StatusCode, Json<DeployResponse>) {
     // Convert payload to a valid wadm file
     let wadm_config = match config_converter::convert_pipeline(
         &payload.pipeline,
         &payload.workspace_slug,
-        settings,
+        app_config,
     ) {
         Ok(config) => {
             tracing::info!("Successfully converted pipeline to WADM config");
@@ -49,9 +49,9 @@ pub async fn deploy_pipeline_to_wasm_cloud(
         wadm_client::ClientConnectOptions {
             ca_path: None,
             creds_path: None,
-            jwt: settings.nats.jwt.clone(),
-            seed: settings.nats.nkey.clone(),
-            url: Some(settings.nats.cluster_uris.clone()),
+            jwt: app_config.nats.jwt.clone(),
+            seed: app_config.nats.nkey.clone(),
+            url: Some(app_config.nats.cluster_uris.clone()),
         },
     )
     .await
@@ -87,10 +87,10 @@ pub async fn deploy_pipeline_to_wasm_cloud(
 
 pub async fn deploy_providers_to_wasm_cloud(
     workspace_slug: &str,
-    settings: &Settings,
+    app_config: &AppConfig,
 ) -> (StatusCode, Json<DeployResponse>) {
     // Create providers wadm config
-    let wadm_config = config_converter::create_providers_wadm(workspace_slug, settings);
+    let wadm_config = config_converter::create_providers_wadm(workspace_slug, app_config);
 
     // Convert to YAML string
     let wadm_yaml = match serde_yaml::to_string(&wadm_config) {
@@ -114,9 +114,9 @@ pub async fn deploy_providers_to_wasm_cloud(
         wadm_client::ClientConnectOptions {
             ca_path: None,
             creds_path: None,
-            jwt: settings.nats.jwt.clone(),
-            seed: settings.nats.nkey.clone(),
-            url: Some(settings.nats.cluster_uris.clone()),
+            jwt: app_config.nats.jwt.clone(),
+            seed: app_config.nats.nkey.clone(),
+            url: Some(app_config.nats.cluster_uris.clone()),
         },
     )
     .await

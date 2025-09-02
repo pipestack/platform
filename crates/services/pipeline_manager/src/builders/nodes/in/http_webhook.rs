@@ -26,7 +26,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                 )),
                 image: format!(
                     "{}/nodes/in-http:{NODE_VERSION_IN_HTTP}",
-                    context.settings.registry.url
+                    context.app_config.registry.url
                 ),
                 config: step.settings.as_ref().map(|s| match s {
                     PipelineNodeSettings::InHttpWebhook(settings) => vec![Config {
@@ -74,7 +74,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                     )),
                     image: format!(
                         "{}/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}",
-                        context.settings.registry.url
+                        context.app_config.registry.url
                     ),
                     config: Some(vec![Config {
                         name: format!(

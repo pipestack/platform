@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::builders::{Component, Config, Properties, ProviderBuilder, Trait, TraitProperties};
-use crate::settings::Settings;
+use crate::config::AppConfig;
 
 pub struct NatsMessagingProviderBuilder;
 
@@ -9,7 +9,7 @@ impl ProviderBuilder for NatsMessagingProviderBuilder {
     fn build_component(
         &self,
         workspace_slug: &str,
-        settings: &Settings,
+        app_config: &AppConfig,
     ) -> Result<Component, Box<dyn std::error::Error>> {
         Ok(Component {
             name: "messaging-nats".to_string(),
@@ -23,15 +23,15 @@ impl ProviderBuilder for NatsMessagingProviderBuilder {
                         let mut props = BTreeMap::new();
                         props.insert(
                             "cluster_uris".to_string(),
-                            serde_yaml::Value::String(settings.nats.cluster_uris.to_string()),
+                            serde_yaml::Value::String(app_config.nats.cluster_uris.to_string()),
                         );
-                        if let Some(jwt) = &settings.nats.jwt {
+                        if let Some(jwt) = &app_config.nats.jwt {
                             props.insert(
                                 "client_jwt".to_string(),
                                 serde_yaml::Value::String(jwt.clone()),
                             );
                         }
-                        if let Some(seed) = &settings.nats.nkey {
+                        if let Some(seed) = &app_config.nats.nkey {
                             props.insert(
                                 "client_seed".to_string(),
                                 serde_yaml::Value::String(seed.clone()),

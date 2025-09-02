@@ -25,7 +25,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                 )),
                 image: format!(
                     "{}/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}",
-                    context.settings.registry.url
+                    context.app_config.registry.url
                 ),
                 config: None,
             },
@@ -76,7 +76,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                 )),
                 image: format!(
                     "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
-                    context.settings.registry.url,
+                    context.app_config.registry.url,
                     context.workspace_slug,
                     context.pipeline.name,
                     context.pipeline.version,
@@ -106,7 +106,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                     )),
                     image: format!(
                         "{}/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}",
-                        context.settings.registry.url
+                        context.app_config.registry.url
                     ),
                     config: Some(vec![Config {
                         name: format!(

@@ -25,7 +25,7 @@ impl ComponentBuilder for OutLogBuilder {
                 )),
                 image: format!(
                     "{}/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}",
-                    context.settings.registry.url
+                    context.app_config.registry.url
                 ),
                 config: None,
             },
@@ -76,7 +76,7 @@ impl ComponentBuilder for OutLogBuilder {
                 )),
                 image: format!(
                     "{}/nodes/out-log:{NODE_VERSION_OUT_LOG}",
-                    context.settings.registry.url
+                    context.app_config.registry.url
                 ),
                 config: None,
             },

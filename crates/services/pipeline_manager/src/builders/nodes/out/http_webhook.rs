@@ -26,7 +26,7 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
                 )),
                 image: format!(
                     "{}/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}",
-                    context.settings.registry.url
+                    context.app_config.registry.url
                 ),
                 config: None,
             },
@@ -77,7 +77,7 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
                 )),
                 image: format!(
                     "{}/nodes/out-http-webhook:{NODE_VERSION_OUT_HTTP_WEBHOOK}",
-                    context.settings.registry.url
+                    context.app_config.registry.url
                 ),
                 config: step.settings.as_ref().map(|s| match s {
                     PipelineNodeSettings::OutHttpWebhook(settings) => vec![Config {

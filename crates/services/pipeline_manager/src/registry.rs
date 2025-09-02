@@ -1,4 +1,4 @@
-use crate::{DeployRequest, settings::Settings};
+use crate::{DeployRequest, config::AppConfig};
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
 use shared::PipelineNodeType;
@@ -40,7 +40,7 @@ pub async fn test_registry_connectivity(
 
 pub async fn publish_wasm_components(
     payload: &DeployRequest,
-    settings: &Settings,
+    app_config: &AppConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
@@ -64,7 +64,7 @@ pub async fn publish_wasm_components(
 
     let r2_endpoint = format!(
         "https://{}.r2.cloudflarestorage.com/{}",
-        &settings.cloudflare.account_id, &settings.cloudflare.r2_bucket
+        &app_config.cloudflare.account_id, &app_config.cloudflare.r2_bucket
     );
 
     info!("Using R2 endpoint: {}", r2_endpoint);
@@ -86,8 +86,8 @@ pub async fn publish_wasm_components(
             &client,
             &r2_endpoint,
             &r2_key,
-            &settings.cloudflare.r2_access_key_id,
-            &settings.cloudflare.r2_secret_access_key,
+            &app_config.cloudflare.r2_access_key_id,
+            &app_config.cloudflare.r2_secret_access_key,
         )
         .await
         {
@@ -105,7 +105,7 @@ pub async fn publish_wasm_components(
         // Publish to OCI registry
         info!(
             "Publishing node {} to registry at: {}",
-            node_id, &settings.registry.url
+            node_id, &app_config.registry.url
         );
 
         // Test registry connectivity first
@@ -113,7 +113,7 @@ pub async fn publish_wasm_components(
             "Testing registry connectivity before publishing node: {}",
             node_id
         );
-        if let Err(e) = test_registry_connectivity(&settings.registry.url).await {
+        if let Err(e) = test_registry_connectivity(&app_config.registry.url).await {
             error!(
                 "Registry connectivity test failed for node {}: {}",
                 node_id, e
@@ -137,10 +137,10 @@ pub async fn publish_wasm_components(
 
         let full_image_ref = format!(
             "{}:{}",
-            if settings.registry.url.starts_with("http://")
-                || settings.registry.url.starts_with("https://")
+            if app_config.registry.url.starts_with("http://")
+                || app_config.registry.url.starts_with("https://")
             {
-                let registry_without_protocol = &settings
+                let registry_without_protocol = &app_config
                     .registry
                     .url
                     .trim_start_matches("https://")
@@ -148,14 +148,14 @@ pub async fn publish_wasm_components(
                     .trim_end_matches('/');
                 format!("{registry_without_protocol}/{image_name}")
             } else {
-                format!("{}/{}", &settings.registry.url, image_name)
+                format!("{}/{}", &app_config.registry.url, image_name)
             },
             tag
         );
         info!("Full image ref to push: {}", &full_image_ref);
 
         let push_options = OciPushOptions {
-            insecure: settings.registry.url.starts_with("http://"),
+            insecure: app_config.registry.url.starts_with("http://"),
             ..Default::default()
         };
 

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use shared::{Pipeline, PipelineNode};
 use std::collections::{BTreeMap, HashMap};
 
-use crate::settings::Settings;
+use crate::config::AppConfig;
 
 pub mod nodes;
 pub mod providers;
@@ -106,7 +106,7 @@ pub struct LinkSource {
 pub struct BuildContext<'a> {
     pub pipeline: &'a Pipeline,
     pub workspace_slug: &'a str,
-    pub settings: &'a Settings,
+    pub app_config: &'a AppConfig,
     pub step_topics: &'a HashMap<String, String>,
 }
 
@@ -114,13 +114,13 @@ impl<'a> BuildContext<'a> {
     pub fn new(
         pipeline: &'a Pipeline,
         workspace_slug: &'a str,
-        settings: &'a Settings,
+        app_config: &'a AppConfig,
         step_topics: &'a HashMap<String, String>,
     ) -> Self {
         Self {
             pipeline,
             workspace_slug,
-            settings,
+            app_config,
             step_topics,
         }
     }
@@ -164,7 +164,7 @@ pub trait ProviderBuilder {
     fn build_component(
         &self,
         workspace_slug: &str,
-        settings: &Settings,
+        app_config: &AppConfig,
     ) -> Result<Component, Box<dyn std::error::Error>>;
 }
 

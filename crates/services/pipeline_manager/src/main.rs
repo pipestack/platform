@@ -10,25 +10,25 @@ use serde::{Deserialize, Serialize};
 use shared::Pipeline;
 use tokio::net::TcpListener;
 
+use crate::config::AppConfig;
+
 mod builders;
+mod config;
 mod config_converter;
 mod registry;
-mod settings;
 mod wadm;
-
-use settings::Settings;
 
 #[derive(Clone)]
 struct AppState {
-    settings: Settings,
+    app_config: AppConfig,
 }
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let settings = Settings::new().expect("Could not read config settings");
-    let state = AppState { settings };
+    let app_config = AppConfig::new().expect("Could not read app config");
+    let state = AppState { app_config };
 
     let app = Router::new()
         .route("/deploy", post(deploy_pipeline))
@@ -62,7 +62,8 @@ async fn deploy_pipeline(
 ) -> (StatusCode, Json<DeployResponse>) {
     tracing::info!("Received deploy request: {:?}", payload);
 
-    if let Err(e) = crate::registry::publish_wasm_components(&payload, &app_state.settings).await {
+    if let Err(e) = crate::registry::publish_wasm_components(&payload, &app_state.app_config).await
+    {
         tracing::error!("Failed to publish WASM components: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -72,7 +73,7 @@ async fn deploy_pipeline(
         );
     }
 
-    crate::wadm::deploy_pipeline_to_wasm_cloud(&payload, &app_state.settings).await
+    crate::wadm::deploy_pipeline_to_wasm_cloud(&payload, &app_state.app_config).await
 }
 
 async fn deploy_providers(
@@ -81,7 +82,8 @@ async fn deploy_providers(
 ) -> (StatusCode, Json<DeployResponse>) {
     tracing::info!("Received deploy-providers request: {:?}", payload);
 
-    crate::wadm::deploy_providers_to_wasm_cloud(&payload.workspace_slug, &app_state.settings).await
+    crate::wadm::deploy_providers_to_wasm_cloud(&payload.workspace_slug, &app_state.app_config)
+        .await
 }
 
 #[derive(Debug, Deserialize, Serialize)]
