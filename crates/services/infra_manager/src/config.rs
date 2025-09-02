@@ -1,21 +1,13 @@
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use std::env;
+use config::{Config, ConfigError, Environment, File};
+use serde::Deserialize;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    pub database: DatabaseConfig,
-    pub railway: RailwayConfig,
-    pub service: ServiceConfig,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct DatabaseConfig {
     pub url: String,
     pub notification_channel: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct RailwayConfig {
     pub environment_id: String,
     pub token: String,
@@ -25,11 +17,19 @@ pub struct RailwayConfig {
     pub default_branch: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct ServiceConfig {
     pub name_prefix: String,
     pub max_retries: u32,
     pub retry_delay_ms: u64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[derive(Default)]
+pub struct AppConfig {
+    pub database: DatabaseConfig,
+    pub railway: RailwayConfig,
+    pub service: ServiceConfig,
 }
 
 impl Default for ServiceConfig {
@@ -42,82 +42,63 @@ impl Default for ServiceConfig {
     }
 }
 
-impl Config {
-    pub fn from_env() -> Result<Self> {
-        let database_url = env::var("DATABASE_URL")
-            .map_err(|_| anyhow::anyhow!("DATABASE_URL environment variable is required"))?;
+impl Default for DatabaseConfig {
+    fn default() -> Self {
+        Self {
+            url: String::new(),
+            notification_channel: "workspace_created".to_string(),
+        }
+    }
+}
 
-        let railway_environment_id = env::var("RAILWAY_ENVIRONMENT_ID").map_err(|_| {
-            anyhow::anyhow!("RAILWAY_ENVIRONMENT_ID environment variable is required")
-        })?;
+impl Default for RailwayConfig {
+    fn default() -> Self {
+        Self {
+            environment_id: String::new(),
+            token: String::new(),
+            project_id: String::new(),
+            api_url: "https://backboard.railway.app/graphql/v2".to_string(),
+            default_template_repo: "pipestack/wasmcloud-infra".to_string(),
+            default_branch: "main".to_string(),
+        }
+    }
+}
 
-        let railway_token = env::var("RAILWAY_TOKEN")
-            .map_err(|_| anyhow::anyhow!("RAILWAY_TOKEN environment variable is required"))?;
 
-        let railway_project_id = env::var("RAILWAY_PROJECT_ID")
-            .map_err(|_| anyhow::anyhow!("RAILWAY_PROJECT_ID environment variable is required"))?;
-
-        let railway_api_url = env::var("RAILWAY_API_URL")
-            .unwrap_or_else(|_| "https://backboard.railway.app/graphql/v2".to_string());
-
-        let default_template_repo = env::var("RAILWAY_DEFAULT_TEMPLATE_REPO")
-            .unwrap_or_else(|_| "pipestack/wasmcloud-infra".to_string());
-
-        let default_branch =
-            env::var("RAILWAY_DEFAULT_BRANCH").unwrap_or_else(|_| "main".to_string());
-
-        let notification_channel = env::var("DATABASE_NOTIFICATION_CHANNEL")
-            .unwrap_or_else(|_| "workspace_created".to_string());
-
-        let service_name_prefix =
-            env::var("SERVICE_NAME_PREFIX").unwrap_or_else(|_| "wasmcloud".to_string());
-
-        let max_retries = env::var("MAX_RETRIES")
-            .unwrap_or_else(|_| "3".to_string())
-            .parse()
-            .unwrap_or(3);
-
-        let retry_delay_ms = env::var("RETRY_DELAY_MS")
-            .unwrap_or_else(|_| "1000".to_string())
-            .parse()
-            .unwrap_or(1000);
-
-        Ok(Config {
-            database: DatabaseConfig {
-                url: database_url,
-                notification_channel,
-            },
-            railway: RailwayConfig {
-                environment_id: railway_environment_id,
-                token: railway_token,
-                project_id: railway_project_id,
-                api_url: railway_api_url,
-                default_template_repo,
-                default_branch,
-            },
-            service: ServiceConfig {
-                name_prefix: service_name_prefix,
-                max_retries,
-                retry_delay_ms,
-            },
-        })
+impl AppConfig {
+    pub fn new() -> Result<Self, ConfigError> {
+        let s = Config::builder()
+            .add_source(File::with_name(".env.local").required(false))
+            .add_source(Environment::with_prefix("pipestack").separator("__"))
+            .build()?;
+        let app_config: AppConfig = s.try_deserialize()?;
+        tracing::debug!("Loaded app config: {:?}", app_config);
+        Ok(app_config)
     }
 
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.database.url.is_empty() {
-            return Err(anyhow::anyhow!("Database URL cannot be empty"));
+            return Err(ConfigError::Message(
+                "Database URL cannot be empty".to_string(),
+            ));
         }
 
         if self.railway.token.is_empty() {
-            return Err(anyhow::anyhow!("Railway token cannot be empty"));
+            return Err(ConfigError::Message(
+                "Railway token cannot be empty".to_string(),
+            ));
         }
 
         if self.railway.project_id.is_empty() {
-            return Err(anyhow::anyhow!("Railway project ID cannot be empty"));
+            return Err(ConfigError::Message(
+                "Railway project ID cannot be empty".to_string(),
+            ));
         }
 
         if !self.railway.api_url.starts_with("http") {
-            return Err(anyhow::anyhow!("Railway API URL must be a valid HTTP URL"));
+            return Err(ConfigError::Message(
+                "Railway API URL must be a valid HTTP URL".to_string(),
+            ));
         }
 
         Ok(())
@@ -130,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_config_validation() {
-        let mut config = Config {
+        let mut app_config = AppConfig {
             database: DatabaseConfig {
                 url: "postgresql://test".to_string(),
                 notification_channel: "test_channel".to_string(),
@@ -146,22 +127,44 @@ mod tests {
             service: ServiceConfig::default(),
         };
 
-        assert!(config.validate().is_ok());
+        assert!(app_config.validate().is_ok());
 
         // Test empty database URL
-        config.database.url = "".to_string();
-        assert!(config.validate().is_err());
+        app_config.database.url = "".to_string();
+        assert!(app_config.validate().is_err());
 
-        // Test zero polling interval
-        config.railway.api_url = "https://api.railway.app".to_string();
-        assert!(config.validate().is_err());
+        // Reset database URL and test empty railway token
+        app_config.database.url = "postgresql://test".to_string();
+        app_config.railway.token = "".to_string();
+        assert!(app_config.validate().is_err());
     }
 
     #[test]
     fn test_service_config_default() {
-        let config = ServiceConfig::default();
-        assert_eq!(config.name_prefix, "wasmcloud");
-        assert_eq!(config.max_retries, 3);
-        assert_eq!(config.retry_delay_ms, 1000);
+        let service_config = ServiceConfig::default();
+        assert_eq!(service_config.name_prefix, "wasmcloud");
+        assert_eq!(service_config.max_retries, 3);
+        assert_eq!(service_config.retry_delay_ms, 1000);
+    }
+
+    #[test]
+    fn test_database_config_default() {
+        let database_config = DatabaseConfig::default();
+        assert_eq!(database_config.notification_channel, "workspace_created");
+        assert!(database_config.url.is_empty());
+    }
+
+    #[test]
+    fn test_railway_config_default() {
+        let railway_config = RailwayConfig::default();
+        assert_eq!(
+            railway_config.api_url,
+            "https://backboard.railway.app/graphql/v2"
+        );
+        assert_eq!(
+            railway_config.default_template_repo,
+            "pipestack/wasmcloud-infra"
+        );
+        assert_eq!(railway_config.default_branch, "main");
     }
 }

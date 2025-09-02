@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::{error, info, warn};
 
-use crate::{WorkspaceNotification, config::Config};
+use crate::{WorkspaceNotification, config::AppConfig};
 
 #[derive(Debug, Serialize)]
 struct RailwayServiceSource {
@@ -73,13 +73,13 @@ struct RailwayServiceInput {
     variables: std::collections::HashMap<String, String>,
 }
 
-pub async fn try_to_create_service(config: &Config, workspace: WorkspaceNotification) {
+pub async fn try_to_create_service(app_config: &AppConfig, workspace: WorkspaceNotification) {
     // Try to create Railway service with retries
     let mut retry_count = 0;
     let mut success = false;
 
-    while retry_count < config.service.max_retries && !success {
-        match create_railway_service(config, &workspace).await {
+    while retry_count < app_config.service.max_retries && !success {
+        match create_railway_service(app_config, &workspace).await {
             Ok(_) => {
                 success = true;
                 info!(
@@ -95,10 +95,10 @@ pub async fn try_to_create_service(config: &Config, workspace: WorkspaceNotifica
                     workspace.slug, retry_count, e
                 );
 
-                if retry_count < config.service.max_retries {
-                    info!("Retrying in {}ms...", config.service.retry_delay_ms);
+                if retry_count < app_config.service.max_retries {
+                    info!("Retrying in {}ms...", app_config.service.retry_delay_ms);
                     tokio::time::sleep(tokio::time::Duration::from_millis(
-                        config.service.retry_delay_ms,
+                        app_config.service.retry_delay_ms,
                     ))
                     .await;
                 }
@@ -109,13 +109,16 @@ pub async fn try_to_create_service(config: &Config, workspace: WorkspaceNotifica
     if !success {
         error!(
             "Failed to create Railway service for workspace {} after {} attempts",
-            workspace.slug, config.service.max_retries
+            workspace.slug, app_config.service.max_retries
         );
     }
 }
 
-async fn create_railway_service(config: &Config, workspace: &WorkspaceNotification) -> Result<()> {
-    let service_name = format!("{}-{}", config.service.name_prefix, &workspace.slug);
+async fn create_railway_service(
+    app_config: &AppConfig,
+    workspace: &WorkspaceNotification,
+) -> Result<()> {
+    let service_name = format!("{}-{}", app_config.service.name_prefix, &workspace.slug);
 
     let mutation = r#"
             mutation ServiceCreate($input: ServiceCreateInput!) {
@@ -156,12 +159,12 @@ async fn create_railway_service(config: &Config, workspace: &WorkspaceNotificati
 
     let variables = json!({
         "input": RailwayServiceInput {
-            branch: config.railway.default_branch.clone(),
-            environment_id: config.railway.environment_id.clone(),
+            branch: app_config.railway.default_branch.clone(),
+            environment_id: app_config.railway.environment_id.clone(),
             name: service_name.clone(),
-            project_id: config.railway.project_id.clone(),
+            project_id: app_config.railway.project_id.clone(),
             source: RailwayServiceSource {
-                repo: config.railway.default_template_repo.clone(),
+                repo: app_config.railway.default_template_repo.clone(),
             },
             variables: env_variables,
         }
@@ -173,7 +176,7 @@ async fn create_railway_service(config: &Config, workspace: &WorkspaceNotificati
     );
 
     let response_text =
-        make_railway_graphql_request(config, mutation, variables, "service creation").await?;
+        make_railway_graphql_request(app_config, mutation, variables, "service creation").await?;
 
     let railway_response: RailwayResponse = serde_json::from_str(&response_text)?;
 
@@ -192,13 +195,13 @@ async fn create_railway_service(config: &Config, workspace: &WorkspaceNotificati
             );
 
             // Update the service instance configuration
-            update_service_instance(config, &service.id).await?;
+            update_service_instance(app_config, &service.id).await?;
 
             // Create a domain for the service
-            create_service_domain(config, &service.id, &workspace.slug).await?;
+            create_service_domain(app_config, &service.id, &workspace.slug).await?;
 
             // Redeploy the service instance
-            redeploy_service_instance(config, &service.id).await?;
+            redeploy_service_instance(app_config, &service.id).await?;
 
             // Wait 90 seconds for the service to fully deploy
             info!("Waiting 90 seconds for service to fully deploy...");
@@ -217,7 +220,7 @@ async fn create_railway_service(config: &Config, workspace: &WorkspaceNotificati
 }
 
 async fn make_railway_graphql_request(
-    config: &Config,
+    app_config: &AppConfig,
     mutation: &str,
     variables: serde_json::Value,
     operation_name: &str,
@@ -230,8 +233,11 @@ async fn make_railway_graphql_request(
     info!("Making Railway GraphQL request: {}", operation_name);
 
     let response = Client::new()
-        .post(&config.railway.api_url)
-        .header("Authorization", format!("Bearer {}", config.railway.token))
+        .post(&app_config.railway.api_url)
+        .header(
+            "Authorization",
+            format!("Bearer {}", app_config.railway.token),
+        )
         .header("Content-Type", "application/json")
         .json(&request_body)
         .send()
@@ -257,7 +263,7 @@ async fn make_railway_graphql_request(
     Ok(response_text)
 }
 
-async fn update_service_instance(config: &Config, service_id: &str) -> Result<()> {
+async fn update_service_instance(app_config: &AppConfig, service_id: &str) -> Result<()> {
     let mutation = r#"
         mutation ServiceInstanceUpdate($serviceId: String!, $environmentId: String, $input: ServiceInstanceUpdateInput!) {
             serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input)
@@ -266,7 +272,7 @@ async fn update_service_instance(config: &Config, service_id: &str) -> Result<()
 
     let variables = json!({
         "serviceId": service_id,
-        "environmentId": config.railway.environment_id,
+        "environmentId": app_config.railway.environment_id,
         "input": ServiceInstanceUpdateInput {
             builder: "NIXPACKS".to_string(),
             railway_config_file: "./services/wasmcloud/railway.json".to_string(),
@@ -277,7 +283,8 @@ async fn update_service_instance(config: &Config, service_id: &str) -> Result<()
 
     info!("Updating Railway service instance: {}", service_id);
 
-    make_railway_graphql_request(config, mutation, variables, "service instance update").await?;
+    make_railway_graphql_request(app_config, mutation, variables, "service instance update")
+        .await?;
 
     info!(
         "Successfully updated Railway service instance: {}",
@@ -287,7 +294,7 @@ async fn update_service_instance(config: &Config, service_id: &str) -> Result<()
 }
 
 async fn create_service_domain(
-    config: &Config,
+    app_config: &AppConfig,
     service_id: &str,
     workspace_slug: &str,
 ) -> Result<()> {
@@ -301,7 +308,7 @@ async fn create_service_domain(
 
     let variables = json!({
         "input": {
-            "environmentId": config.railway.environment_id,
+            "environmentId": app_config.railway.environment_id,
             "serviceId": service_id,
             "targetPort": 8000
         }
@@ -310,7 +317,8 @@ async fn create_service_domain(
     info!("Creating domain for Railway service: {}", service_id);
 
     let response_text =
-        make_railway_graphql_request(config, mutation, variables, "service domain create").await?;
+        make_railway_graphql_request(app_config, mutation, variables, "service domain create")
+            .await?;
 
     let domain_response: RailwayDomainCreateResponse = serde_json::from_str(&response_text)?;
 
@@ -331,7 +339,7 @@ async fn create_service_domain(
             );
 
             // Update the domain with a better name
-            update_service_domain(config, &domain.id, service_id, workspace_slug).await?;
+            update_service_domain(app_config, &domain.id, service_id, workspace_slug).await?;
         } else {
             return Err(anyhow::anyhow!(
                 "Domain creation succeeded but no domain data returned"
@@ -347,7 +355,7 @@ async fn create_service_domain(
 }
 
 async fn update_service_domain(
-    config: &Config,
+    app_config: &AppConfig,
     domain_id: &str,
     service_id: &str,
     workspace_slug: &str,
@@ -363,7 +371,7 @@ async fn update_service_domain(
     let variables = json!({
         "input": {
             "domain": domain_name,
-            "environmentId": config.railway.environment_id,
+            "environmentId": app_config.railway.environment_id,
             "serviceDomainId": domain_id,
             "serviceId": service_id,
             "targetPort": 8000
@@ -375,7 +383,7 @@ async fn update_service_domain(
         service_id, domain_name
     );
 
-    make_railway_graphql_request(config, mutation, variables, "service domain update").await?;
+    make_railway_graphql_request(app_config, mutation, variables, "service domain update").await?;
 
     info!(
         "Successfully updated domain for Railway service: {} to {}",
@@ -384,7 +392,7 @@ async fn update_service_domain(
     Ok(())
 }
 
-async fn redeploy_service_instance(config: &Config, service_id: &str) -> Result<()> {
+async fn redeploy_service_instance(app_config: &AppConfig, service_id: &str) -> Result<()> {
     let mutation = r#"
         mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
             serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
@@ -393,12 +401,13 @@ async fn redeploy_service_instance(config: &Config, service_id: &str) -> Result<
 
     let variables = json!({
         "serviceId": service_id,
-        "environmentId": config.railway.environment_id
+        "environmentId": app_config.railway.environment_id
     });
 
     info!("Redeploying Railway service instance: {}", service_id);
 
-    make_railway_graphql_request(config, mutation, variables, "service instance redeploy").await?;
+    make_railway_graphql_request(app_config, mutation, variables, "service instance redeploy")
+        .await?;
 
     info!(
         "Successfully redeployed Railway service instance: {}",

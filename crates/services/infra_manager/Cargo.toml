@@ -10,6 +10,7 @@ tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 reqwest.workspace = true
+config.workspace = true
 sqlx = { version = "0.8", features = [
     "runtime-tokio-rustls",
     "postgres",

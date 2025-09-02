@@ -3,7 +3,7 @@ mod database;
 mod railway;
 
 use anyhow::Result;
-use config::Config;
+use config::AppConfig;
 use serde::Deserialize;
 use sqlx::{PgPool, postgres::PgListener};
 use tracing::{error, info};
@@ -14,33 +14,36 @@ struct WorkspaceNotification {
 }
 
 struct InfraManager {
-    config: Config,
+    app_config: AppConfig,
     pool: PgPool,
 }
 
 impl InfraManager {
     async fn new() -> Result<Self> {
-        let config = Config::from_env()?;
-        config.validate()?;
+        let app_config =
+            AppConfig::new().map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
+        app_config
+            .validate()
+            .map_err(|e| anyhow::anyhow!("Config validation failed: {}", e))?;
 
         info!("Connecting to database...");
-        let pool = PgPool::connect(&config.database.url).await?;
+        let pool = PgPool::connect(&app_config.database.url).await?;
         database::test_connection(&pool).await?;
 
-        Ok(Self { config, pool })
+        Ok(Self { app_config, pool })
     }
 
     async fn listen_for_notifications(&self) -> Result<()> {
         info!("Starting notification listener...");
 
-        let mut listener = PgListener::connect(&self.config.database.url).await?;
+        let mut listener = PgListener::connect(&self.app_config.database.url).await?;
         listener
-            .listen(&self.config.database.notification_channel)
+            .listen(&self.app_config.database.notification_channel)
             .await?;
 
         info!(
             "Started listening for workspace changes on channel: {}",
-            self.config.database.notification_channel
+            self.app_config.database.notification_channel
         );
 
         loop {
@@ -51,7 +54,7 @@ impl InfraManager {
                 Ok(workspace) => {
                     info!("Processing new workspace: {:?}", workspace);
 
-                    railway::try_to_create_service(&self.config, workspace).await;
+                    railway::try_to_create_service(&self.app_config, workspace).await;
                 }
                 Err(e) => {
                     error!("Failed to parse notification payload: {}", e);
