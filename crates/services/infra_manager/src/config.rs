@@ -1,13 +1,13 @@
 use config::{Config, ConfigError, Environment, File};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
     pub url: String,
     pub notification_channel: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RailwayConfig {
     pub environment_id: String,
     pub token: String,
@@ -17,18 +17,20 @@ pub struct RailwayConfig {
     pub default_branch: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ServiceConfig {
     pub name_prefix: String,
     pub max_retries: u32,
     pub retry_delay_ms: u64,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[derive(Default)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct AppConfig {
+    #[serde(default)]
     pub database: DatabaseConfig,
+    #[serde(default)]
     pub railway: RailwayConfig,
+    #[serde(default)]
     pub service: ServiceConfig,
 }
 
@@ -54,9 +56,9 @@ impl Default for DatabaseConfig {
 impl Default for RailwayConfig {
     fn default() -> Self {
         Self {
-            environment_id: String::new(),
+            environment_id: std::env::var("RAILWAY_ENVIRONMENT_ID").unwrap_or_default(),
             token: String::new(),
-            project_id: String::new(),
+            project_id: std::env::var("RAILWAY_PROJECT_ID").unwrap_or_default(),
             api_url: "https://backboard.railway.app/graphql/v2".to_string(),
             default_template_repo: "pipestack/wasmcloud-infra".to_string(),
             default_branch: "main".to_string(),
@@ -64,14 +66,15 @@ impl Default for RailwayConfig {
     }
 }
 
-
 impl AppConfig {
     pub fn new() -> Result<Self, ConfigError> {
-        let s = Config::builder()
+        let defaults = Config::try_from(&AppConfig::default())?;
+        let c = Config::builder()
+            .add_source(defaults)
             .add_source(File::with_name(".env.local").required(false))
             .add_source(Environment::with_prefix("pipestack").separator("__"))
             .build()?;
-        let app_config: AppConfig = s.try_deserialize()?;
+        let app_config: AppConfig = c.try_deserialize()?;
         tracing::debug!("Loaded app config: {:?}", app_config);
         Ok(app_config)
     }
