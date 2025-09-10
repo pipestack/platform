@@ -1,0 +1,260 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: rust-hello-world
+  annotations:
+    version: v0.0.1
+    description: "HTTP hello world demo in Rust, using the WebAssembly Component Model and WebAssembly Interfaces Types (WIT)"
+spec:
+  policies:
+    - name: infisical-secrets-policy
+      type: policy.secret.wasmcloud.dev/v1alpha1
+      properties:
+        # This must match the BACKEND_NAME environment variable
+        # of your Infisical secrets provider
+        backend: infisical
+  components:
+    - name: http-component
+      type: component
+      properties:
+        image: ghcr.io/wasmcloud/components/http-hello-world-rust:0.1.0
+        secrets:
+          - name: api_password
+            properties:
+              policy: infisical-secrets-policy
+              key: api_password
+      traits:
+        # Govern the spread/scheduling of the component
+        - type: spreadscaler
+          properties:
+            instances: 1
+
+    # Add a capability provider that enables HTTP access
+    - name: httpserver
+      type: capability
+      properties:
+        image: ghcr.io/wasmcloud/http-server:0.27.0
+        ## To configure OTEL integration for this provider specifically, uncomment the lines below
+        # config:
+        #   - name: otel
+        #     properties:
+        #       otel_exporter_otlp_endpoint: "http://all-in-one:4318"
+        #       otel_exporter_otlp_traces_endpoint: "http://traces-backend/v1/traces"
+        #       otel_exporter_otlp_metrics_endpoint: "http://metrics-backend/v1/metrics"
+        #       otel_exporter_otlp_logs_endpoint: "http://logs-backend/v1/logs"
+      traits:
+        # Establish a unidirectional link from this http server provider (the "source")
+        # to the `http-component` component (the "target") so the component can handle incoming HTTP requests,
+        #
+        # The source (this provider) is configured such that the HTTP server listens on 0.0.0.0:8000
+        - type: link
+          properties:
+            target:
+              name: http-component
+            namespace: wasi
+            package: http
+            interfaces: [incoming-handler]
+            source:
+              config:
+                - name: default-http
+                  properties:
+                    address: 0.0.0.0:8000
+# # Example wasmCloud Application using Infisical Secrets Backend
+# # This manifest demonstrates how to configure and use the Infisical secrets provider
+# # in a wasmCloud application.
+
+# apiVersion: core.oam.dev/v1beta1
+# kind: Application
+# metadata:
+#   name: infisical-secrets-example
+#   annotations:
+#     version: v1.0.0
+#     description: "Example application demonstrating Infisical secrets integration"
+# spec:
+#   # Define the secrets policy for Infisical
+#   policies:
+#     - name: infisical-secrets-policy
+#       type: policy.secret.wasmcloud.dev/v1alpha1
+#       properties:
+#         # This must match the BACKEND_NAME environment variable
+#         # of your Infisical secrets provider
+#         backend: infisical
+
+#   components:
+#     # Example HTTP server component that uses secrets
+#     - name: http-server
+#       type: component
+#       properties:
+#         # Replace with your actual component image
+#         image: wasmcloud.azurecr.io/http-hello:0.1.0
+#       traits:
+#         # Configure secrets for this component
+#         - type: secrets
+#           properties:
+#             # Reference the secrets policy defined above
+#             policy: infisical-secrets-policy
+#             secrets:
+#               # Map Infisical secrets to environment variables
+#               - name: SECRET_API_KEY
+#                 secret_ref:
+#                   backend: infisical
+#                   key: "API_KEY"
+#                   # version: "1.0"  # Optional: specify secret version
+
+#               - name: SECRET_DATABASE_URL
+#                 secret_ref:
+#                   backend: infisical
+#                   key: "DATABASE_URL"
+
+#               - name: SECRET_JWT_SECRET
+#                 secret_ref:
+#                   backend: infisical
+#                   key: "JWT_SECRET"
+
+#         # Configure the HTTP server provider
+#         - type: spreadscaler
+#           properties:
+#             instances: 1
+
+#     # HTTP server provider to handle incoming requests
+#     - name: httpserver
+#       type: capability
+#       properties:
+#         image: wasmcloud.azurecr.io/httpserver:0.20.0
+#         contract: wasmcloud:httpserver
+#       traits:
+#         # Configure the HTTP server to listen on port 8080
+#         - type: spreadscaler
+#           properties:
+#             instances: 1
+
+#   # Define links between components and providers
+#   links:
+#     - name: http-link
+#       type: link
+#       properties:
+#         source:
+#           name: http-server
+#           namespace: default
+#         target:
+#           name: httpserver
+#           namespace: default
+#         values:
+#           # HTTP server configuration
+#           address: "0.0.0.0:8080"
+
+# # ---
+# # Alternative example: Worker component with multiple secrets
+# # apiVersion: core.oam.dev/v1beta1
+# # kind: Application
+# # metadata:
+# #   name: infisical-worker-example
+# #   annotations:
+# #     version: v1.0.0
+# #     description: "Worker application with multiple Infisical secrets"
+# # spec:
+# #   policies:
+# #     - name: worker-secrets-policy
+# #       type: policy.secret.wasmcloud.dev/v1alpha1
+# #       properties:
+# #         backend: infisical
+
+# #   components:
+# #     # Background worker component
+# #     - name: background-worker
+# #       type: component
+# #       properties:
+# #         # Replace with your worker component image
+# #         image: wasmcloud.azurecr.io/background-worker:0.1.0
+# #       traits:
+# #         - type: secrets
+# #           properties:
+# #             policy: worker-secrets-policy
+# #             secrets:
+# #               # Database credentials
+# #               - name: SECRET_DB_HOST
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "DATABASE_HOST"
+
+# #               - name: SECRET_DB_PORT
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "DATABASE_PORT"
+
+# #               - name: SECRET_DB_USERNAME
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "DATABASE_USERNAME"
+
+# #               - name: SECRET_DB_PASSWORD
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "DATABASE_PASSWORD"
+
+# #               # External API credentials
+# #               - name: SECRET_STRIPE_KEY
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "STRIPE_SECRET_KEY"
+
+# #               - name: SECRET_SENDGRID_API_KEY
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "SENDGRID_API_KEY"
+
+# #               # Service-to-service authentication
+# #               - name: SECRET_SERVICE_TOKEN
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "INTERNAL_SERVICE_TOKEN"
+
+# #         - type: spreadscaler
+# #           properties:
+# #             instances: 2
+
+# # ---
+# # # Example: Multi-environment configuration
+# # apiVersion: core.oam.dev/v1beta1
+# # kind: Application
+# # metadata:
+# #   name: infisical-multi-env-example
+# #   annotations:
+# #     version: v1.0.0
+# #     description: "Example showing different secrets for different environments"
+# # spec:
+# #   policies:
+# #     # Development environment secrets
+# #     - name: dev-secrets
+# #       type: policy.secret.wasmcloud.dev/v1alpha1
+# #       properties:
+# #         backend: infisical
+# #         # Note: The Infisical environment is configured in the secrets provider
+# #         # You would run separate instances of the provider for different environments
+
+# #     # Production environment secrets
+# #     - name: prod-secrets
+# #       type: policy.secret.wasmcloud.dev/v1alpha1
+# #       properties:
+# #         backend: infisical-prod  # Different backend name for prod instance
+
+# #   components:
+# #     - name: api-service
+# #       type: component
+# #       properties:
+# #         image: wasmcloud.azurecr.io/api-service:0.1.0
+# #       traits:
+# #         - type: secrets
+# #           properties:
+# #             # Choose policy based on deployment environment
+# #             policy: dev-secrets  # Change to 'prod-secrets' for production
+# #             secrets:
+# #               - name: SECRET_API_KEY
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "API_KEY"
+
+# #               - name: SECRET_DATABASE_URL
+# #                 secret_ref:
+# #                   backend: infisical
+# #                   key: "DATABASE_URL"

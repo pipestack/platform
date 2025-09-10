@@ -251,6 +251,39 @@ dependencies = [
 
 [[package]]
 name = "async-nats"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eea7b126ebfa4db78e9e788b2a792b6329f35b4f2fdd56dbc646dedc2beec7a5"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "futures",
+ "memchr",
+ "nkeys",
+ "nuid",
+ "once_cell",
+ "portable-atomic",
+ "rand 0.8.5",
+ "regex",
+ "ring",
+ "rustls-native-certs 0.7.3",
+ "rustls-pemfile",
+ "rustls-webpki 0.102.8",
+ "serde",
+ "serde_json",
+ "serde_nanos",
+ "serde_repr",
+ "thiserror 1.0.69",
+ "time",
+ "tokio",
+ "tokio-rustls 0.25.0",
+ "tracing",
+ "tryhard",
+ "url",
+]
+
+[[package]]
+name = "async-nats"
 version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a798aab0c0203b31d67d501e5ed1f3ac6c36a329899ce47fc93c3bea53f3ae89"
@@ -2746,6 +2779,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "infisical"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d97c33b08e22b2f7b9f87a8fc06a7d247442db7bf216ffc6661a74ed8aea658"
+dependencies = [
+ "base64 0.22.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "infisical_secrets_provider"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-nats 0.34.0",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "config 0.15.13",
+ "futures-util",
+ "infisical",
+ "nkeys",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "infra_manager"
 version = "0.1.0"
 dependencies = [
@@ -4615,6 +4684,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "encoding_rs",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "h2 0.4.11",
@@ -6676,7 +6746,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0da1f9ce2c2106150659973236178099e526e7f8b5a86ac9a5f1a2f6a9fc7b66"
 dependencies = [
  "anyhow",
- "async-nats",
+ "async-nats 0.39.0",
  "futures",
  "nkeys",
  "serde_json",
@@ -6915,7 +6985,7 @@ dependencies = [
  "anstyle",
  "anyhow",
  "async-compression",
- "async-nats",
+ "async-nats 0.39.0",
  "bytes",
  "cargo_metadata",
  "cargo_toml",
@@ -7401,7 +7471,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41868a6dd70347b67bbd435c98a04b2023215d8b602c6d9e12e307d96ef1e856"
 dependencies = [
  "anyhow",
- "async-nats",
+ "async-nats 0.39.0",
  "cloudevents-sdk",
  "futures",
  "oci-client",
@@ -7421,7 +7491,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c94a4985bf0057d868fcad314c67b8f3b36196a6bbacdddb3532925c2c343df0"
 dependencies = [
  "anyhow",
- "async-nats",
+ "async-nats 0.39.0",
  "oci-client",
  "oci-wasm",
  "once_cell",
@@ -8888,7 +8958,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4dc30392e9bd860933ac34644400f917306d46e376e94818f3d5161c1f68871f"
 dependencies = [
  "anyhow",
- "async-nats",
+ "async-nats 0.39.0",
  "bytes",
  "futures",
  "nuid",

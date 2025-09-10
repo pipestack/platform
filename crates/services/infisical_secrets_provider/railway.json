@@ -1,0 +1,15 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "buildCommand": "cargo build --release --package infisical_secrets_provider",
+    "watchPatterns": ["crates/services/infisical_secrets_provider/*"]
+  },
+  "deploy": {
+    "startCommand": "./target/release/infisical_secrets_provider",
+    "numReplicas": 1,
+    "region": "us-east4-eqdc4a",
+    "restartPolicyMaxRetries": 10,
+    "restartPolicyType": "ON_FAILURE",
+    "runtime": "V2"
+  }
+}

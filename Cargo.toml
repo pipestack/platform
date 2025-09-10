@@ -11,6 +11,7 @@ members = [
     "crates/nodes/out-internal",
     "crates/nodes/out-log",
     "crates/schemas/pipeline",
+    "crates/services/infisical_secrets_provider",
     "crates/services/infra_manager",
     "crates/services/pipeline_manager",
     "crates/shared",
