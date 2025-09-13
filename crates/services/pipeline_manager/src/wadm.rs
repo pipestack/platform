@@ -1,10 +1,12 @@
 use axum::{Json, http::StatusCode};
+use sqlx::PgPool;
 
-use crate::{DeployRequest, DeployResponse, config::AppConfig, config_converter};
+use crate::{DeployRequest, DeployResponse, config::AppConfig, config_converter, database};
 
 pub async fn deploy_pipeline_to_wasm_cloud(
     payload: &DeployRequest,
     app_config: &AppConfig,
+    db_pool: &PgPool,
 ) -> (StatusCode, Json<DeployResponse>) {
     // Convert payload to a valid wadm file
     let wadm_config = match config_converter::convert_pipeline(
@@ -43,9 +45,15 @@ pub async fn deploy_pipeline_to_wasm_cloud(
 
     tracing::info!("WADM yaml generated successfully: {wadm_yaml}");
 
+    let nats_account = match get_nats_account(&payload.workspace_slug, db_pool).await {
+        Ok(value) => value,
+        Err(value) => return value,
+    };
+
+    let wadm_subject = format!("{}.wadm.api", nats_account);
     let client = match wadm_client::Client::new(
         &payload.workspace_slug,
-        None,
+        Some(&wadm_subject),
         wadm_client::ClientConnectOptions {
             ca_path: None,
             creds_path: None,
@@ -88,6 +96,7 @@ pub async fn deploy_pipeline_to_wasm_cloud(
 pub async fn deploy_providers_to_wasm_cloud(
     workspace_slug: &str,
     app_config: &AppConfig,
+    db_pool: &PgPool,
 ) -> (StatusCode, Json<DeployResponse>) {
     // Create providers wadm config
     let wadm_config = config_converter::create_providers_wadm(workspace_slug, app_config);
@@ -108,9 +117,15 @@ pub async fn deploy_providers_to_wasm_cloud(
 
     tracing::info!("Providers WADM yaml generated successfully: {wadm_yaml}");
 
+    let nats_account = match get_nats_account(workspace_slug, db_pool).await {
+        Ok(value) => value,
+        Err(value) => return value,
+    };
+
+    let wadm_subject = format!("{}.wadm.api", nats_account);
     let client = match wadm_client::Client::new(
         workspace_slug,
-        None,
+        Some(&wadm_subject),
         wadm_client::ClientConnectOptions {
             ca_path: None,
             creds_path: None,
@@ -158,4 +173,39 @@ pub async fn deploy_providers_to_wasm_cloud(
             )
         }
     }
+}
+
+async fn get_nats_account(
+    workspace_slug: &str,
+    db_pool: &sqlx::Pool<sqlx::Postgres>,
+) -> Result<String, (StatusCode, Json<DeployResponse>)> {
+    let nats_account = match database::get_workspace_nats_account(db_pool, workspace_slug).await {
+        Ok(Some(account)) => account,
+        Ok(None) => {
+            tracing::error!("No NATS account found for workspace: {}", workspace_slug);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DeployResponse {
+                    result: format!(
+                        "No NATS account configured for workspace: {}",
+                        workspace_slug
+                    ),
+                }),
+            ));
+        }
+        Err(e) => {
+            tracing::error!(
+                "Failed to fetch NATS account for workspace {}: {}",
+                workspace_slug,
+                e
+            );
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DeployResponse {
+                    result: format!("Error fetching workspace NATS account: {e}"),
+                }),
+            ));
+        }
+    };
+    Ok(nats_account)
 }

@@ -2,6 +2,11 @@ use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct DatabaseConfig {
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct Cloudflare {
     pub account_id: String,
     pub r2_access_key_id: String,
@@ -26,6 +31,7 @@ pub struct AppConfig {
     pub cloudflare: Cloudflare,
     pub nats: Nats,
     pub registry: Registry,
+    pub database: DatabaseConfig,
 }
 
 impl AppConfig {

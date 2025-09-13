@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::{error, info, warn};
 
-use crate::{WorkspaceNotification, config::AppConfig};
+use crate::{WorkspaceNotification, config::AppConfig, nats::NatsCredentials};
 
 #[derive(Debug, Serialize)]
 struct RailwayServiceSource {
@@ -73,13 +73,17 @@ struct RailwayServiceInput {
     variables: std::collections::HashMap<String, String>,
 }
 
-pub async fn try_to_create_service(app_config: &AppConfig, workspace: WorkspaceNotification) {
+pub async fn try_to_create_service(
+    app_config: &AppConfig,
+    workspace: WorkspaceNotification,
+    nats_credentials: &NatsCredentials,
+) {
     // Try to create Railway service with retries
     let mut retry_count = 0;
     let mut success = false;
 
     while retry_count < app_config.service.max_retries && !success {
-        match create_railway_service(app_config, &workspace).await {
+        match create_railway_service(app_config, &workspace, nats_credentials).await {
             Ok(_) => {
                 success = true;
                 info!(
@@ -117,6 +121,7 @@ pub async fn try_to_create_service(app_config: &AppConfig, workspace: WorkspaceN
 async fn create_railway_service(
     app_config: &AppConfig,
     workspace: &WorkspaceNotification,
+    nats_credentials: &NatsCredentials,
 ) -> Result<()> {
     let service_name = format!("{}-{}", app_config.service.name_prefix, &workspace.slug);
 
@@ -156,6 +161,16 @@ async fn create_railway_service(
         "http://${{otelcol.RAILWAY_PRIVATE_DOMAIN}}:4318".to_string(),
     );
     env_variables.insert("WASMCLOUD_LATTICE".to_string(), workspace.slug.clone());
+    env_variables.insert("WASMCLOUD_JS_DOMAIN".to_string(), "pipestack".to_string());
+
+    env_variables.insert(
+        "WASMCLOUD_NATS_JWT".to_string(),
+        nats_credentials.user_jwt.clone(),
+    );
+    env_variables.insert(
+        "WASMCLOUD_NATS_SEED".to_string(),
+        nats_credentials.user_seed.clone(),
+    );
 
     let variables = json!({
         "input": RailwayServiceInput {

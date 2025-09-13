@@ -2819,8 +2819,12 @@ name = "infra_manager"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "chrono",
+ "async-nats 0.34.0",
+ "base64 0.22.1",
  "config 0.15.13",
+ "infisical",
+ "nats-io-jwt",
+ "nkeys",
  "reqwest",
  "serde",
  "serde_json",
@@ -3330,6 +3334,24 @@ dependencies = [
  "security-framework 2.11.1",
  "security-framework-sys",
  "tempfile",
+]
+
+[[package]]
+name = "nats-io-jwt"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61594e2aae878fee4e7395cafc4bcde177e22b91f55586211cbdae714aa38a91"
+dependencies = [
+ "data-encoding",
+ "nkeys",
+ "prettyplease",
+ "regress",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "sha2",
+ "syn",
+ "typify",
 ]
 
 [[package]]
@@ -4074,6 +4096,7 @@ dependencies = [
 name = "pipeline_manager"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "axum",
  "chrono",
  "config 0.15.13",
@@ -4085,6 +4108,7 @@ dependencies = [
  "serde_yaml",
  "sha2",
  "shared",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -4674,6 +4698,16 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
+
+[[package]]
+name = "regress"
+version = "0.10.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "145bb27393fe455dd64d6cbc8d059adfa392590a45eadf079c01b11857e7b010"
+dependencies = [
+ "hashbrown 0.15.4",
+ "memchr",
+]
 
 [[package]]
 name = "reqwest"
@@ -5316,6 +5350,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40734c41988f7306bb04f0ecf60ec0f3f1caa34290e4e8ea471dcd3346483b83"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "serde_tokenstream"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64060d864397305347a78851c51588fd283767e7e7589829e8121d65512340f1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn",
 ]
 
 [[package]]
@@ -6556,6 +6602,53 @@ name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
+
+[[package]]
+name = "typify"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e03ba3643450cfd95a1aca2e1938fef63c1c1994489337998aff4ad771f21ef8"
+dependencies = [
+ "typify-impl",
+ "typify-macro",
+]
+
+[[package]]
+name = "typify-impl"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bce48219a2f3154aaa2c56cbf027728b24a3c8fe0a47ed6399781de2b3f3eeaf"
+dependencies = [
+ "heck 0.5.0",
+ "log",
+ "proc-macro2",
+ "quote",
+ "regress",
+ "schemars 0.8.22",
+ "semver",
+ "serde",
+ "serde_json",
+ "syn",
+ "thiserror 2.0.12",
+ "unicode-ident",
+]
+
+[[package]]
+name = "typify-macro"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68b5780d745920ed73c5b7447496a9b5c42ed2681a9b70859377aec423ecf02b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "schemars 0.8.22",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_tokenstream",
+ "syn",
+ "typify-impl",
+]
 
 [[package]]
 name = "ucd-trie"

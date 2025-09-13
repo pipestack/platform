@@ -15,12 +15,14 @@ use crate::config::AppConfig;
 mod builders;
 mod config;
 mod config_converter;
+mod database;
 mod registry;
 mod wadm;
 
 #[derive(Clone)]
 struct AppState {
     app_config: AppConfig,
+    db_pool: sqlx::PgPool,
 }
 
 #[tokio::main]
@@ -28,7 +30,21 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let app_config = AppConfig::new().expect("Could not read app config");
-    let state = AppState { app_config };
+
+    tracing::info!("Connecting to database...");
+    let db_pool = sqlx::PgPool::connect(&app_config.database.url)
+        .await
+        .expect("Failed to connect to database");
+
+    if let Err(e) = database::test_connection(&db_pool).await {
+        tracing::error!("Database connection test failed: {}", e);
+        panic!("Failed to establish database connection");
+    }
+
+    let state = AppState {
+        app_config,
+        db_pool,
+    };
 
     let app = Router::new()
         .route("/deploy", post(deploy_pipeline))
@@ -73,7 +89,8 @@ async fn deploy_pipeline(
         );
     }
 
-    crate::wadm::deploy_pipeline_to_wasm_cloud(&payload, &app_state.app_config).await
+    crate::wadm::deploy_pipeline_to_wasm_cloud(&payload, &app_state.app_config, &app_state.db_pool)
+        .await
 }
 
 async fn deploy_providers(
@@ -82,8 +99,12 @@ async fn deploy_providers(
 ) -> (StatusCode, Json<DeployResponse>) {
     tracing::info!("Received deploy-providers request: {:?}", payload);
 
-    crate::wadm::deploy_providers_to_wasm_cloud(&payload.workspace_slug, &app_state.app_config)
-        .await
+    crate::wadm::deploy_providers_to_wasm_cloud(
+        &payload.workspace_slug,
+        &app_state.app_config,
+        &app_state.db_pool,
+    )
+    .await
 }
 
 #[derive(Debug, Deserialize, Serialize)]

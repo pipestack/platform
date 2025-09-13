@@ -24,6 +24,26 @@ pub struct ServiceConfig {
     pub retry_delay_ms: u64,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct NatsConfig {
+    pub jwt: Option<String>,
+    pub nkey: Option<String>,
+    pub sys_jwt: Option<String>,
+    pub sys_nkey: Option<String>,
+    pub operator_seed: String,
+    pub pipestack_account_seed: String,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct InfisicalConfig {
+    pub client_id: String,
+    pub client_secret: String,
+    pub base_url: String,
+    pub project_id: String,
+    pub environment: String,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct AppConfig {
     #[serde(default)]
@@ -32,6 +52,10 @@ pub struct AppConfig {
     pub railway: RailwayConfig,
     #[serde(default)]
     pub service: ServiceConfig,
+    #[serde(default)]
+    pub nats: NatsConfig,
+    #[serde(default)]
+    pub infisical: InfisicalConfig,
 }
 
 impl Default for ServiceConfig {
@@ -62,6 +86,36 @@ impl Default for RailwayConfig {
             api_url: "https://backboard.railway.app/graphql/v2".to_string(),
             default_template_repo: "pipestack/wasmcloud-infra".to_string(),
             default_branch: "main".to_string(),
+        }
+    }
+}
+
+impl Default for NatsConfig {
+    fn default() -> Self {
+        Self {
+            jwt: None,
+            nkey: None,
+            sys_jwt: None,
+            sys_nkey: None,
+            operator_seed: std::env::var("NATS_OPERATOR_SEED").unwrap_or_default(),
+            pipestack_account_seed: std::env::var("NATS_PIPESTACK_ACCOUNT_SEED")
+                .unwrap_or_default(),
+            url: std::env::var("NATS_SERVER_URL")
+                .unwrap_or_else(|_| "nats://localhost:4222".to_string()),
+        }
+    }
+}
+
+impl Default for InfisicalConfig {
+    fn default() -> Self {
+        Self {
+            client_id: std::env::var("INFISICAL_CLIENT_ID").unwrap_or_default(),
+            client_secret: std::env::var("INFISICAL_CLIENT_SECRET").unwrap_or_default(),
+            base_url: std::env::var("INFISICAL_BASE_URL")
+                .unwrap_or_else(|_| "https://app.infisical.com".to_string()),
+            project_id: std::env::var("INFISICAL_PROJECT_ID").unwrap_or_default(),
+            environment: std::env::var("INFISICAL_ENVIRONMENT")
+                .unwrap_or_else(|_| "dev".to_string()),
         }
     }
 }
@@ -104,6 +158,36 @@ impl AppConfig {
             ));
         }
 
+        if self.nats.operator_seed.is_empty() {
+            return Err(ConfigError::Message(
+                "NATS operator seed cannot be empty".to_string(),
+            ));
+        }
+
+        if self.nats.url.is_empty() {
+            return Err(ConfigError::Message(
+                "NATS server URL cannot be empty".to_string(),
+            ));
+        }
+
+        if self.infisical.client_id.is_empty() {
+            return Err(ConfigError::Message(
+                "Infisical client ID cannot be empty".to_string(),
+            ));
+        }
+
+        if self.infisical.client_secret.is_empty() {
+            return Err(ConfigError::Message(
+                "Infisical client secret cannot be empty".to_string(),
+            ));
+        }
+
+        if self.infisical.project_id.is_empty() {
+            return Err(ConfigError::Message(
+                "Infisical project ID cannot be empty".to_string(),
+            ));
+        }
+
         Ok(())
     }
 }
@@ -128,6 +212,22 @@ mod tests {
                 default_branch: "main".to_string(),
             },
             service: ServiceConfig::default(),
+            nats: NatsConfig {
+                jwt: None,
+                nkey: None,
+                sys_jwt: None,
+                sys_nkey: None,
+                operator_seed: "test_operator_seed".to_string(),
+                pipestack_account_seed: "pipestack_account_seed".to_string(),
+                url: "nats://localhost:4222".to_string(),
+            },
+            infisical: InfisicalConfig {
+                client_id: "test_client_id".to_string(),
+                client_secret: "test_client_secret".to_string(),
+                base_url: "https://app.infisical.com".to_string(),
+                project_id: "test_project_id".to_string(),
+                environment: "prod".to_string(),
+            },
         };
 
         assert!(app_config.validate().is_ok());
@@ -169,5 +269,18 @@ mod tests {
             "pipestack/wasmcloud-infra"
         );
         assert_eq!(railway_config.default_branch, "main");
+    }
+
+    #[test]
+    fn test_nats_config_default() {
+        let nats_config = NatsConfig::default();
+        assert_eq!(nats_config.url, "nats://localhost:4222");
+    }
+
+    #[test]
+    fn test_infisical_config_default() {
+        let infisical_config = InfisicalConfig::default();
+        assert_eq!(infisical_config.base_url, "https://app.infisical.com");
+        assert_eq!(infisical_config.environment, "dev");
     }
 }

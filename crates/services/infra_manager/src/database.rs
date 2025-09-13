@@ -84,3 +84,39 @@ pub async fn setup_database_trigger(pool: &PgPool) -> Result<()> {
     info!("Database trigger setup completed successfully");
     Ok(())
 }
+
+pub async fn update_workspace_nats_account(
+    pool: &PgPool,
+    workspace_slug: &str,
+    nats_account_public_key: &str,
+) -> Result<()> {
+    info!(
+        "Updating workspace '{}' with NATS account public key: {}",
+        workspace_slug, nats_account_public_key
+    );
+
+    let update_query = r#"
+        UPDATE workspaces
+        SET nats_account = $1
+        WHERE slug = $2
+    "#;
+
+    let result = sqlx::query(update_query)
+        .bind(nats_account_public_key)
+        .bind(workspace_slug)
+        .execute(pool)
+        .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(anyhow::anyhow!(
+            "No workspace found with slug: {}",
+            workspace_slug
+        ));
+    }
+
+    info!(
+        "Successfully updated workspace '{}' with NATS account public key",
+        workspace_slug
+    );
+    Ok(())
+}
