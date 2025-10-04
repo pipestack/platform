@@ -1,3 +1,9 @@
+## 0.1.5 (2025-10-04)
+
+### Fixes
+
+- Release nodes to GitHub
+
 ## 0.1.4 (2025-08-31)
 
 ### Fixes
