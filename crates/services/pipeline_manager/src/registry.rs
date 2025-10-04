@@ -113,7 +113,7 @@ pub async fn publish_wasm_components(
             "Testing registry connectivity before publishing node: {}",
             node_id
         );
-        if let Err(e) = test_registry_connectivity(&app_config.registry.url).await {
+        if let Err(e) = test_registry_connectivity(&app_config.registry.internal_url).await {
             error!(
                 "Registry connectivity test failed for node {}: {}",
                 node_id, e
@@ -137,25 +137,25 @@ pub async fn publish_wasm_components(
 
         let full_image_ref = format!(
             "{}:{}",
-            if app_config.registry.url.starts_with("http://")
-                || app_config.registry.url.starts_with("https://")
+            if app_config.registry.internal_url.starts_with("http://")
+                || app_config.registry.internal_url.starts_with("https://")
             {
                 let registry_without_protocol = &app_config
                     .registry
-                    .url
+                    .internal_url
                     .trim_start_matches("https://")
                     .trim_start_matches("http://")
                     .trim_end_matches('/');
                 format!("{registry_without_protocol}/{image_name}")
             } else {
-                format!("{}/{}", &app_config.registry.url, image_name)
+                format!("{}/{}", &app_config.registry.internal_url, image_name)
             },
             tag
         );
         info!("Full image ref to push: {}", &full_image_ref);
 
         let push_options = OciPushOptions {
-            insecure: app_config.registry.url.starts_with("http://"),
+            insecure: app_config.registry.internal_url.starts_with("http://"),
             ..Default::default()
         };
 

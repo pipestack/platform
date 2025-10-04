@@ -23,6 +23,7 @@ pub struct Nats {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Registry {
+    pub internal_url: String,
     pub url: String,
 }
 

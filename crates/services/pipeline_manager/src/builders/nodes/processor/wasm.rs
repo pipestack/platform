@@ -76,7 +76,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                 )),
                 image: format!(
                     "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
-                    context.app_config.registry.url,
+                    context.app_config.registry.internal_url,
                     context.workspace_slug,
                     context.pipeline.name,
                     context.pipeline.version,
