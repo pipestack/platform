@@ -121,7 +121,7 @@ jobs:
             component_name=${name%_s.wasm}
             image_name="ghcr.io/${{ github.repository_owner }}/node-$component_name"
             
-            echo "- \`$image_name:${{ steps.get-release.outputs.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`$image_name:${{ steps.get-release.outputs.tag_version }}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           done < <(cat wasm_assets.json | jq -c '.')
 
