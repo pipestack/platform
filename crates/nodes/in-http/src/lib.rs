@@ -44,7 +44,7 @@ impl http::Server for Component {
                 .status(StatusCode::METHOD_NOT_ALLOWED)
                 .body("Method not allowed".to_string())
                 .map_err(|e| {
-                    ErrorCode::InternalError(Some(format!("failed to build response {e:?}")))
+                    ErrorCode::InternalError(Some(format!("failed to build response: {e:?}")))
                 });
         }
 
