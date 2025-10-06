@@ -25,7 +25,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                     context.workspace_slug, context.pipeline.name, step.name
                 )),
                 image: format!(
-                    "{}/nodes/in-http:{NODE_VERSION_IN_HTTP}",
+                    "{}/nodes/in_http:{NODE_VERSION_IN_HTTP}",
                     context.app_config.registry.url
                 ),
                 config: step.settings.as_ref().map(|s| match s {
@@ -73,7 +73,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                         context.workspace_slug, context.pipeline.name, step.name
                     )),
                     image: format!(
-                        "{}/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}",
+                        "{}/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}",
                         context.app_config.registry.url
                     ),
                     config: Some(vec![Config {

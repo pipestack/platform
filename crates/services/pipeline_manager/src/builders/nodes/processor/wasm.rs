@@ -24,7 +24,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                     context.workspace_slug, context.pipeline.name, step.name
                 )),
                 image: format!(
-                    "{}/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}",
+                    "{}/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}",
                     context.app_config.registry.url
                 ),
                 config: None,
@@ -105,7 +105,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                         context.workspace_slug, context.pipeline.name, step.name
                     )),
                     image: format!(
-                        "{}/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}",
+                        "{}/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}",
                         context.app_config.registry.url
                     ),
                     config: Some(vec![Config {

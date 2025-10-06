@@ -380,7 +380,7 @@ spec:
   - name: in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/in-http:{NODE_VERSION_IN_HTTP}
+      image: http://localhost:5000/nodes/in_http:{NODE_VERSION_IN_HTTP}
       id: default_mine-in-http-webhook_17
     traits:
     - type: spreadscaler
@@ -397,7 +397,7 @@ spec:
   - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
@@ -418,7 +418,7 @@ spec:
   - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
@@ -452,7 +452,7 @@ spec:
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
@@ -473,7 +473,7 @@ spec:
   - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
@@ -498,7 +498,7 @@ spec:
   - name: out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/out-log:{NODE_VERSION_OUT_LOG}
+      image: http://localhost:5000/nodes/out_log:{NODE_VERSION_OUT_LOG}
       id: default_mine-out-log_19
     traits:
     - type: spreadscaler
@@ -631,7 +631,7 @@ spec:
   - name: in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/in-http:{NODE_VERSION_IN_HTTP}
+      image: http://localhost:5000/nodes/in_http:{NODE_VERSION_IN_HTTP}
       id: default_mine-in-http-webhook_17
     traits:
     - type: spreadscaler
@@ -648,7 +648,7 @@ spec:
   - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
@@ -669,7 +669,7 @@ spec:
   - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
@@ -703,7 +703,7 @@ spec:
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/out-internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
       id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
@@ -724,7 +724,7 @@ spec:
   - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
@@ -749,7 +749,7 @@ spec:
   - name: out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/out-log:{NODE_VERSION_OUT_LOG}
+      image: http://localhost:5000/nodes/out_log:{NODE_VERSION_OUT_LOG}
       id: default_mine-out-log_19
     traits:
     - type: spreadscaler
@@ -758,7 +758,7 @@ spec:
   - name: in-internal-for-out-log_20
     type: component
     properties:
-      image: http://localhost:5000/nodes/in-internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
       id: default_mine-in-internal-for-out-log_20
     traits:
     - type: spreadscaler
@@ -783,7 +783,7 @@ spec:
   - name: out-log_20
     type: component
     properties:
-      image: http://localhost:5000/nodes/out-log:{NODE_VERSION_OUT_LOG}
+      image: http://localhost:5000/nodes/out_log:{NODE_VERSION_OUT_LOG}
       id: default_mine-out-log_20
     traits:
     - type: spreadscaler
@@ -888,6 +888,9 @@ spec:
         use crate::builders::providers::ProviderBuilderRegistry;
 
         let app_config = AppConfig {
+            database: crate::config::DatabaseConfig {
+                url: "test-db".to_string(),
+            },
             cloudflare: crate::config::Cloudflare {
                 account_id: "test_account".to_string(),
                 r2_access_key_id: "test_key".to_string(),
@@ -900,6 +903,7 @@ spec:
                 nkey: Some("test-nkey".to_string()),
             },
             registry: crate::config::Registry {
+                internal_url: "http://localhost:8080".to_string(),
                 url: "http://localhost:8080".to_string(),
             },
         };
@@ -935,6 +939,9 @@ spec:
     #[test]
     fn test_create_providers_wadm_uses_registry() {
         let app_config = AppConfig {
+            database: crate::config::DatabaseConfig {
+                url: "test-db".to_string(),
+            },
             cloudflare: crate::config::Cloudflare {
                 account_id: "test_account".to_string(),
                 r2_access_key_id: "test_key".to_string(),
@@ -947,6 +954,7 @@ spec:
                 nkey: Some("test-nkey".to_string()),
             },
             registry: crate::config::Registry {
+                internal_url: "http://localhost:8080".to_string(),
                 url: "http://localhost:8080".to_string(),
             },
         };
@@ -985,6 +993,9 @@ spec:
         use crate::builders::{ProviderType, providers::ProviderBuilderRegistry};
 
         let app_config = AppConfig {
+            database: crate::config::DatabaseConfig {
+                url: "test-db".to_string(),
+            },
             cloudflare: crate::config::Cloudflare {
                 account_id: "test_account".to_string(),
                 r2_access_key_id: "test_key".to_string(),
@@ -997,6 +1008,7 @@ spec:
                 nkey: Some("test-nkey".to_string()),
             },
             registry: crate::config::Registry {
+                internal_url: "http://localhost:8080".to_string(),
                 url: "http://localhost:8080".to_string(),
             },
         };
