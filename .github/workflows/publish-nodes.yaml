@@ -93,11 +93,8 @@ jobs:
             # Download the WASM file
             gh release download ${{ steps.get-release.outputs.tag_name }} --pattern "*.wasm"
             
-            # Extract component name (remove _s.wasm suffix)
-            component_name=${name%_s.wasm}
-            
             # Build and push the container image
-            image_name="ghcr.io/${{ github.repository_owner }}/nodes/$component_name"
+            image_name="ghcr.io/${{ github.repository_owner }}/nodes/$name"
             version="${{ steps.get-release.outputs.tag_version }}"
 
             echo "Pushing image: $image_name:$version"
@@ -118,8 +115,7 @@ jobs:
 
           while read -r asset; do
             name=$(echo "$asset" | jq -r '.name')
-            component_name=${name%_s.wasm}
-            image_name="ghcr.io/${{ github.repository_owner }}/node-$component_name"
+            image_name="ghcr.io/${{ github.repository_owner }}/node-$name"
             
             echo "- \`$image_name:${{ steps.get-release.outputs.tag_version }}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
