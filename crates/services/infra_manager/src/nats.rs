@@ -310,7 +310,7 @@ impl NatsManager {
         let new_import = Import {
             account: Some(workspace_account_public_key.to_string()),
             local_subject: Some(RenamingSubject(format!(
-                "{}.{}.{}",
+                "{}{}.{}",
                 subject_prefix.unwrap_or_default(),
                 workspace_account_public_key,
                 subject
