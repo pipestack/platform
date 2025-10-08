@@ -3,13 +3,6 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD as BASE64_NO_PAD, Engine};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
-/// JWT header structure
-#[derive(Debug, Serialize, Deserialize)]
-struct JwtHeader {
-    pub alg: String,
-    pub typ: String,
-}
-
 /// JWT claims structure for wasmCloud components and providers
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct JwtClaims {

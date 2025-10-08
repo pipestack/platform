@@ -45,12 +45,15 @@ pub async fn deploy_pipeline_to_wasm_cloud(
 
     tracing::info!("WADM yaml generated successfully: {wadm_yaml}");
 
-    let nats_account = match get_nats_account(&payload.workspace_slug, db_pool).await {
-        Ok(value) => value,
-        Err(value) => return value,
+    let wadm_subject = if payload.workspace_slug == "default" {
+        "wadm.api".to_string()
+    } else {
+        let nats_account = match get_nats_account(&payload.workspace_slug, db_pool).await {
+            Ok(value) => value,
+            Err(value) => return value,
+        };
+        format!("{}.wadm.api", nats_account)
     };
-
-    let wadm_subject = format!("{}.wadm.api", nats_account);
     let client = match wadm_client::Client::new(
         &payload.workspace_slug,
         Some(&wadm_subject),
@@ -117,12 +120,15 @@ pub async fn deploy_providers_to_wasm_cloud(
 
     tracing::info!("Providers WADM yaml generated successfully: {wadm_yaml}");
 
-    let nats_account = match get_nats_account(workspace_slug, db_pool).await {
-        Ok(value) => value,
-        Err(value) => return value,
+    let wadm_subject = if workspace_slug == "default" {
+        "wadm.api".to_string()
+    } else {
+        let nats_account = match get_nats_account(workspace_slug, db_pool).await {
+            Ok(value) => value,
+            Err(value) => return value,
+        };
+        format!("{}.wadm.api", nats_account)
     };
-
-    let wadm_subject = format!("{}.wadm.api", nats_account);
     let client = match wadm_client::Client::new(
         workspace_slug,
         Some(&wadm_subject),
