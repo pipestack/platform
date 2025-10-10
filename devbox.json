@@ -38,7 +38,7 @@
       "lefthook install"
     ],
     "scripts": {
-      "services":            "process-compose",
+      "services":            "process-compose -p 8081",
       "webapp:schema:build": "cd ./crates/schemas/pipeline && cargo run > ../../../../../webapp/main/static/pipeline.schema.json && cd -",
       "webapp:types:build":  "cd ./crates/shared/ && cargo test export_bindings && cp -r bindings/* ../../../../webapp/main/src/routes/[workspaceSlug]/pipeline/[pipelineName]/[pipelineVersion=pipeline_version]/builder/types/ && cd -"
     }
