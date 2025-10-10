@@ -54,6 +54,7 @@ pub struct XYPosition {
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
 pub struct InHttpWebhookSettings {
     pub method: String,
+    pub path: String,
     #[serde(rename = "contentType", skip_serializing_if = "Option::is_none")]
     pub content_type: Option<String>,
     #[serde(
