@@ -33,7 +33,7 @@ wash-push-all:
 wash-push-one node: (wash-run-one node "build")
     #!/usr/bin/env bash
     if [ -d "crates/nodes/{{node}}" ]; then
-        crate_name=$(basename "{{node}}")
+        crate_name=$(basename "{{node}}" | sed 's/-/_/g')
         if [ "$crate_name" = "customer" ] || [ "$crate_name" = "out" ]; then
             echo "⏭️  Skipping excluded crate: $crate_name"
             continue
