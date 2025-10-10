@@ -1,4 +1,4 @@
-use shared::{Pipeline, PipelineNodeType};
+use shared::{Pipeline, PipelineNodeSettings, PipelineNodeType};
 use std::collections::{BTreeMap, HashMap};
 
 use crate::builders::{
@@ -35,27 +35,23 @@ pub fn convert_pipeline(
 
     // Add capabilities (httpserver, httpclient and messaging-nats)
     // HTTP Server capability
-    if pipeline
+    let http_steps: Vec<_> = pipeline
         .nodes
         .iter()
-        .any(|s| matches!(s.step_type, PipelineNodeType::InHttpWebhook))
-    {
-        let http_step = pipeline
-            .nodes
-            .iter()
-            .find(|s| matches!(s.step_type, PipelineNodeType::InHttpWebhook))
-            .unwrap();
+        .filter(|s| matches!(s.step_type, PipelineNodeType::InHttpWebhook))
+        .collect();
 
-        components.push(Component {
-            name: "httpserver".to_string(),
-            component_type: "capability".to_string(),
-            properties: Properties::WithApplication {
-                application: ApplicationRef {
-                    name: format!("{workspace_slug}-providers"),
-                    component: "httpserver".to_string(),
-                },
-            },
-            traits: vec![Trait {
+    if !http_steps.is_empty() {
+        let mut http_traits = Vec::new();
+
+        for http_step in http_steps {
+            // Extract path from settings, or use empty string as default
+            let path = match &http_step.settings {
+                Some(PipelineNodeSettings::InHttpWebhook(settings)) => settings.path.clone(),
+                _ => "".to_string(), // Default empty path, will result in just pipeline name
+            };
+
+            http_traits.push(Trait {
                 trait_type: "link".to_string(),
                 properties: TraitProperties::Link(LinkProperties {
                     name: Some(format!(
@@ -65,14 +61,19 @@ pub fn convert_pipeline(
                     source: Some(LinkSource {
                         config: Some(vec![Config {
                             name: format!(
-                                "{}-{}-httpserver-path-config-v{}",
-                                workspace_slug, pipeline.name, pipeline.version
+                                "{}-{}-httpserver-path-config-{}-v{}",
+                                workspace_slug, pipeline.name, path, pipeline.version
                             ),
                             properties: {
                                 let mut props = BTreeMap::new();
+                                let final_path = if path.is_empty() {
+                                    format!("/{}", pipeline.name)
+                                } else {
+                                    format!("/{}/{}", pipeline.name, path)
+                                };
                                 props.insert(
                                     "path".to_string(),
-                                    serde_yaml::Value::String(format!("/{}", pipeline.name)),
+                                    serde_yaml::Value::String(final_path),
                                 );
                                 props
                             },
@@ -86,7 +87,19 @@ pub fn convert_pipeline(
                     package: "http".to_string(),
                     interfaces: vec!["incoming-handler".to_string()],
                 }),
-            }],
+            });
+        }
+
+        components.push(Component {
+            name: "httpserver".to_string(),
+            component_type: "capability".to_string(),
+            properties: Properties::WithApplication {
+                application: ApplicationRef {
+                    name: format!("{workspace_slug}-providers"),
+                    component: "httpserver".to_string(),
+                },
+            },
+            traits: http_traits,
         });
     }
 
@@ -1036,6 +1049,123 @@ spec:
                 .build_component(workspace_slug, &app_config)
                 .unwrap();
             assert_eq!(component.name, "messaging-nats");
+        }
+    }
+
+    #[test]
+    fn test_multiple_http_webhook_nodes() {
+        use shared::{
+            InHttpWebhookSettings, Pipeline, PipelineNode, PipelineNodeSettings, PipelineNodeType,
+            XYPosition,
+        };
+
+        let app_config = AppConfig::new().expect("Could not read app config");
+
+        // Create pipeline manually with multiple InHttpWebhook nodes
+        let pipeline = Pipeline {
+            name: "multi-http".to_string(),
+            version: "1".to_string(),
+            nodes: vec![
+                PipelineNode {
+                    name: "webhook-1".to_string(),
+                    step_type: PipelineNodeType::InHttpWebhook,
+                    position: XYPosition { x: 100.0, y: 100.0 },
+                    settings: Some(PipelineNodeSettings::InHttpWebhook(InHttpWebhookSettings {
+                        method: "POST".to_string(),
+                        path: "api/webhook1".to_string(),
+                        content_type: None,
+                        request_body_json_schema: None,
+                    })),
+                    instances: None,
+                    depends_on: None,
+                },
+                PipelineNode {
+                    name: "webhook-2".to_string(),
+                    step_type: PipelineNodeType::InHttpWebhook,
+                    position: XYPosition { x: 200.0, y: 100.0 },
+                    settings: Some(PipelineNodeSettings::InHttpWebhook(InHttpWebhookSettings {
+                        method: "GET".to_string(),
+                        path: "api/webhook2".to_string(),
+                        content_type: None,
+                        request_body_json_schema: None,
+                    })),
+                    instances: None,
+                    depends_on: None,
+                },
+                PipelineNode {
+                    name: "processor".to_string(),
+                    step_type: PipelineNodeType::ProcessorWasm,
+                    position: XYPosition { x: 300.0, y: 100.0 },
+                    settings: None,
+                    instances: Some(1000),
+                    depends_on: Some(vec!["webhook-1".to_string(), "webhook-2".to_string()]),
+                },
+            ],
+        };
+
+        // Convert to WADM
+        let actual_wadm = convert_pipeline(&pipeline, &"test".to_string(), &app_config)
+            .expect("Failed to convert pipeline");
+
+        // Find the httpserver component
+        let httpserver_component = actual_wadm
+            .spec
+            .components
+            .iter()
+            .find(|c| c.name == "httpserver")
+            .expect("Should have httpserver component");
+
+        // Verify that the httpserver has two link traits (one for each webhook)
+        assert_eq!(
+            httpserver_component.traits.len(),
+            2,
+            "Should have 2 link traits for 2 webhooks"
+        );
+
+        // Verify the first webhook link
+        let link1 = &httpserver_component.traits[0];
+        assert_eq!(link1.trait_type, "link");
+        if let TraitProperties::Link(link_props) = &link1.properties {
+            assert_eq!(link_props.target.name, "webhook-1");
+            assert_eq!(
+                link_props.name,
+                Some("httpserver-to-test-webhook-1-link".to_string())
+            );
+
+            // Check the path configuration
+            if let Some(source) = &link_props.source {
+                if let Some(config) = &source.config {
+                    assert_eq!(config.len(), 1);
+                    let path_value = config[0].properties.get("path").unwrap();
+                    assert_eq!(
+                        path_value,
+                        &serde_yaml::Value::String("/multi-http/api/webhook1".to_string())
+                    );
+                }
+            }
+        }
+
+        // Verify the second webhook link
+        let link2 = &httpserver_component.traits[1];
+        assert_eq!(link2.trait_type, "link");
+        if let TraitProperties::Link(link_props) = &link2.properties {
+            assert_eq!(link_props.target.name, "webhook-2");
+            assert_eq!(
+                link_props.name,
+                Some("httpserver-to-test-webhook-2-link".to_string())
+            );
+
+            // Check the path configuration
+            if let Some(source) = &link_props.source {
+                if let Some(config) = &source.config {
+                    assert_eq!(config.len(), 1);
+                    let path_value = config[0].properties.get("path").unwrap();
+                    assert_eq!(
+                        path_value,
+                        &serde_yaml::Value::String("/multi-http/api/webhook2".to_string())
+                    );
+                }
+            }
         }
     }
 }
