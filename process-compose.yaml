@@ -24,7 +24,7 @@ processes:
           scheme: http
           path: "/health"
           port: 3000
-          initial_delay_seconds: 5
+          initial_delay_seconds: 10
   dev_deploy_default_providers:
     namespace: dev
     command: |
