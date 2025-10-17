@@ -113,13 +113,123 @@ pub struct OutHttpWebhookSettings {
 impl FromConfig for OutHttpWebhookSettings {}
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
+pub struct NoSettings;
+impl FromConfig for NoSettings {}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[serde(tag = "type", content = "settings")]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH)]
 pub enum PipelineNodeSettings {
+    // Sources - Cloud Storages
+    #[serde(rename = "in-aws-s3")]
+    InAwsS3(NoSettings),
+    #[serde(rename = "in-google-gcs")]
+    InGoogleGcs(NoSettings),
+    #[serde(rename = "in-azure-blob")]
+    InAzureBlob(NoSettings),
+
+    // Sources - Databases
+    #[serde(rename = "in-postgresql")]
+    InPostgresql(NoSettings),
+    #[serde(rename = "in-mongodb")]
+    InMongodb(NoSettings),
+    #[serde(rename = "in-mysql")]
+    InMysql(NoSettings),
+    #[serde(rename = "in-sqlite")]
+    InSqlite(NoSettings),
+
+    // Sources - Streaming
+    #[serde(rename = "in-kafka")]
+    InKafka(NoSettings),
+    #[serde(rename = "in-nats")]
+    InNats(NoSettings),
+    #[serde(rename = "in-rabbitmq")]
+    InRabbitmq(NoSettings),
+    #[serde(rename = "in-redis")]
+    InRedis(NoSettings),
+
+    // Sources - Web / API
     #[serde(rename = "in-http-webhook")]
     InHttpWebhook(InHttpWebhookSettings),
+    #[serde(rename = "in-http-poller")]
+    InHttpPoller(NoSettings),
+    #[serde(rename = "in-graphql-poller")]
+    InGraphqlPoller(NoSettings),
+    #[serde(rename = "in-rss-reader")]
+    InRssReader(NoSettings),
+
+    // Sources - Cloud Services
+    #[serde(rename = "in-google-pubsub")]
+    InGooglePubsub(NoSettings),
+    #[serde(rename = "in-aws-kinesis")]
+    InAwsKinesis(NoSettings),
+    #[serde(rename = "in-stripe")]
+    InStripe(NoSettings),
+    #[serde(rename = "in-github-webhook")]
+    InGithubWebhook(NoSettings),
+
+    // Processors
+    #[serde(rename = "processor-wasm")]
+    ProcessorWasm(NoSettings),
+
+    // Sinks - Databases
+    #[serde(rename = "out-postgresql")]
+    OutPostgresql(NoSettings),
+    #[serde(rename = "out-mongodb")]
+    OutMongodb(NoSettings),
+    #[serde(rename = "out-mysql")]
+    OutMysql(NoSettings),
+    #[serde(rename = "out-redis")]
+    OutRedis(NoSettings),
+
+    // Sinks - Cloud Storages
+    #[serde(rename = "out-aws-s3")]
+    OutAwsS3(NoSettings),
+    #[serde(rename = "out-google-gcs")]
+    OutGoogleGcs(NoSettings),
+    #[serde(rename = "out-azure-blob")]
+    OutAzureBlob(NoSettings),
+
+    // Sinks - Streaming / Queues
+    #[serde(rename = "out-kafka")]
+    OutKafka(NoSettings),
+    #[serde(rename = "out-nats")]
+    OutNats(NoSettings),
+    #[serde(rename = "out-rabbitmq")]
+    OutRabbitmq(NoSettings),
+    #[serde(rename = "out-google-pubsub")]
+    OutGooglePubsub(NoSettings),
+
+    // Sinks - Web / API
+    #[serde(rename = "out-graphql-mutation")]
+    OutGraphqlMutation(NoSettings),
+    #[serde(rename = "out-slack")]
+    OutSlack(NoSettings),
+    #[serde(rename = "out-twilio-sms")]
+    OutTwilioSms(NoSettings),
     #[serde(rename = "out-http-webhook")]
     OutHttpWebhook(OutHttpWebhookSettings),
+
+    // Sinks - Observability
+    #[serde(rename = "out-prometheus")]
+    OutPrometheus(NoSettings),
+    #[serde(rename = "out-loki")]
+    OutLoki(NoSettings),
+    #[serde(rename = "out-elasticsearch")]
+    OutElasticsearch(NoSettings),
+    #[serde(rename = "out-influxdb")]
+    OutInfluxdb(NoSettings),
+
+    // Sinks - Cloud Integrations
+    #[serde(rename = "out-google-bigquery")]
+    OutGoogleBigquery(NoSettings),
+    #[serde(rename = "out-snowflake")]
+    OutSnowflake(NoSettings),
+    #[serde(rename = "out-aws-lambda")]
+    OutAwsLambda(NoSettings),
+    #[serde(rename = "out-log")]
+    OutLog(NoSettings),
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
