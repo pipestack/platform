@@ -98,6 +98,14 @@ pub struct Validation {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
+pub struct ProcessorWasmSettings {
+    pub source: String,
+    pub instances: u32,
+}
+impl FromConfig for ProcessorWasmSettings {}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
+#[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
 pub struct OutHttpWebhookSettings {
     pub method: String,
     pub url: String,
@@ -171,7 +179,7 @@ pub enum PipelineNodeSettings {
 
     // Processors
     #[serde(rename = "processor-wasm")]
-    ProcessorWasm(NoSettings),
+    ProcessorWasm(ProcessorWasmSettings),
 
     // Sinks - Databases
     #[serde(rename = "out-postgresql")]
