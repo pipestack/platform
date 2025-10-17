@@ -51,6 +51,34 @@ struct RailwayDomain {
     id: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct DeploymentListResponse {
+    data: Option<DeploymentListData>,
+    errors: Option<Vec<RailwayError>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DeploymentListData {
+    deployments: DeploymentEdges,
+}
+
+#[derive(Debug, Deserialize)]
+struct DeploymentEdges {
+    edges: Vec<DeploymentEdge>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct DeploymentEdge {
+    node: DeploymentNode,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct DeploymentNode {
+    #[serde(rename = "createdAt")]
+    created_at: String,
+    status: String,
+}
+
 #[derive(Debug, Serialize)]
 struct ServiceInstanceUpdateInput {
     builder: String,
@@ -218,9 +246,8 @@ async fn create_railway_service(
             // Redeploy the service instance
             redeploy_service_instance(app_config, &service.id).await?;
 
-            // Wait 90 seconds for the service to fully deploy
-            info!("Waiting 90 seconds for service to fully deploy...");
-            tokio::time::sleep(tokio::time::Duration::from_secs(90)).await;
+            // Wait for deployment to succeed
+            wait_for_deployment_success(app_config, &service.id).await?;
 
             // Notify pipeline manager about the new deployment
             notify_pipeline_manager(&workspace.slug).await?;
@@ -429,6 +456,107 @@ async fn redeploy_service_instance(app_config: &AppConfig, service_id: &str) -> 
         service_id
     );
     Ok(())
+}
+
+async fn wait_for_deployment_success(app_config: &AppConfig, service_id: &str) -> Result<()> {
+    let query = r#"
+        query GetDeployments($input: DeploymentListInput!) {
+            deployments(input: $input) {
+                edges {
+                    node {
+                        createdAt
+                        status
+                    }
+                }
+            }
+        }
+    "#;
+
+    let max_attempts = 90;
+    let sleep_duration = tokio::time::Duration::from_secs(5);
+    let mut attempts = 0;
+
+    info!("Checking deployment status for service: {}", service_id);
+
+    loop {
+        attempts += 1;
+
+        if attempts > max_attempts {
+            return Err(anyhow::anyhow!(
+                "Deployment did not succeed within the timeout period"
+            ));
+        }
+
+        let variables = json!({
+            "input": {
+                "environmentId": app_config.railway.environment_id,
+                "serviceId": service_id.to_string(),
+                "includeDeleted": false
+            }
+        });
+
+        match make_railway_graphql_request(app_config, query, variables, "deployment status check")
+            .await
+        {
+            Ok(response_text) => {
+                let deployment_response: DeploymentListResponse =
+                    match serde_json::from_str(&response_text) {
+                        Ok(response) => response,
+                        Err(e) => {
+                            warn!("Failed to parse deployment status response: {}", e);
+                            tokio::time::sleep(sleep_duration).await;
+                            continue;
+                        }
+                    };
+
+                if let Some(errors) = deployment_response.errors {
+                    for error in errors {
+                        error!("Railway deployment status error: {}", error.message);
+                    }
+                    tokio::time::sleep(sleep_duration).await;
+                    continue;
+                }
+
+                if let Some(data) = deployment_response.data {
+                    let deployments = &data.deployments.edges;
+
+                    if deployments.len() >= 2 {
+                        // Sort deployments by createdAt (most recent first)
+                        let mut sorted_deployments = deployments.to_vec();
+                        sorted_deployments
+                            .sort_by(|a, b| b.node.created_at.cmp(&a.node.created_at));
+
+                        let most_recent = &sorted_deployments[0].node;
+
+                        if most_recent.status == "SUCCESS" {
+                            info!(
+                                "Deployment succeeded! Status: {}, Created: {}",
+                                most_recent.status, most_recent.created_at
+                            );
+                            return Ok(());
+                        } else {
+                            info!(
+                                "Most recent deployment status: {} (waiting for SUCCESS)",
+                                most_recent.status
+                            );
+                        }
+                    } else {
+                        info!(
+                            "Waiting for deployments to appear (found: {})",
+                            deployments.len()
+                        );
+                    }
+                } else {
+                    warn!("Deployment status response contained no data");
+                }
+            }
+            Err(e) => {
+                warn!("Failed to check deployment status: {}", e);
+            }
+        }
+
+        tokio::time::sleep(sleep_duration).await;
+    }
 }
 
 async fn notify_pipeline_manager(workspace_slug: &str) -> Result<()> {
