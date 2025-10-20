@@ -17,12 +17,12 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
 
         // Add in-internal component for out-http-webhook
         components.push(Component {
-            name: format!("in-internal-for-{}", step.name),
+            name: format!("in-internal-for-{}", step.id),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
                 id: Some(format!(
                     "{}_{}-in-internal-for-{}",
-                    context.workspace_slug, context.pipeline.name, step.name
+                    context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
                     "{}/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}",
@@ -55,7 +55,7 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
                         name: None,
                         source: None,
                         target: LinkTarget {
-                            name: step.name.clone(),
+                            name: step.id.clone(),
                             config: None,
                         },
                         namespace: "pipestack".to_string(),
@@ -68,12 +68,12 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
 
         // Add the out-http-webhook component itself
         components.push(Component {
-            name: step.name.clone(),
+            name: step.id.clone(),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
                 id: Some(format!(
                     "{}_{}-{}",
-                    context.workspace_slug, context.pipeline.name, step.name
+                    context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
                     "{}/nodes/out_http_webhook:{NODE_VERSION_OUT_HTTP_WEBHOOK}",
@@ -81,7 +81,7 @@ impl ComponentBuilder for OutHttpWebhookBuilder {
                 ),
                 config: step.settings.as_ref().map(|s| match s {
                     PipelineNodeSettings::OutHttpWebhook(settings) => vec![Config {
-                        name: format!("{}-config-v{}", step.name, context.pipeline.version),
+                        name: format!("{}-config-v{}", step.id, context.pipeline.version),
                         properties: settings_to_config_properties(settings),
                     }],
                     _ => vec![],

@@ -134,7 +134,7 @@ impl<'a> BuildContext<'a> {
                     .as_ref()
                     .is_some_and(|deps| deps.contains(&current_step.to_string()))
             })
-            .and_then(|s| self.step_topics.get(&s.name))
+            .and_then(|s| self.step_topics.get(&s.id))
             .cloned()
     }
 }

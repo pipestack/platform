@@ -56,7 +56,7 @@ pub fn convert_pipeline(
                 properties: TraitProperties::Link(LinkProperties {
                     name: Some(format!(
                         "httpserver-to-{}-{}-link",
-                        workspace_slug, http_step.name
+                        workspace_slug, http_step.id
                     )),
                     source: Some(LinkSource {
                         config: Some(vec![Config {
@@ -80,7 +80,7 @@ pub fn convert_pipeline(
                         }]),
                     }),
                     target: LinkTarget {
-                        name: http_step.name.clone(),
+                        name: http_step.id.clone(),
                         config: None,
                     },
                     namespace: "wasi".to_string(),
@@ -129,14 +129,14 @@ pub fn convert_pipeline(
     let mut subscription_counter = 1;
     for step in &pipeline.nodes {
         if matches!(step.step_type, PipelineNodeType::ProcessorWasm)
-            && let Some(topic) = step_topics.get(&step.name)
+            && let Some(topic) = step_topics.get(&step.id)
         {
             nats_traits.push(Trait {
                 trait_type: "link".to_string(),
                 properties: TraitProperties::Link(LinkProperties {
                     name: Some(format!(
                         "messaging-nats-to-{}-in-internal-for-{}-link",
-                        workspace_slug, step.name
+                        workspace_slug, step.id
                     )),
                     source: Some(LinkSource {
                         config: Some(vec![Config {
@@ -161,7 +161,7 @@ pub fn convert_pipeline(
                         }]),
                     }),
                     target: LinkTarget {
-                        name: format!("in-internal-for-{}", step.name),
+                        name: format!("in-internal-for-{}", step.id),
                         config: None,
                     },
                     namespace: "wasmcloud".to_string(),
@@ -177,14 +177,14 @@ pub fn convert_pipeline(
         if matches!(
             step.step_type,
             PipelineNodeType::OutLog | PipelineNodeType::OutHttpWebhook
-        ) && let Some(topic) = step_topics.get(&step.name)
+        ) && let Some(topic) = step_topics.get(&step.id)
         {
             nats_traits.push(Trait {
                 trait_type: "link".to_string(),
                 properties: TraitProperties::Link(LinkProperties {
                     name: Some(format!(
                         "messaging-nats-to-{}-in-internal-for-{}-link",
-                        workspace_slug, step.name
+                        workspace_slug, step.id
                     )),
                     source: Some(LinkSource {
                         config: Some(vec![Config {
@@ -209,7 +209,7 @@ pub fn convert_pipeline(
                         }]),
                     }),
                     target: LinkTarget {
-                        name: format!("in-internal-for-{}", step.name),
+                        name: format!("in-internal-for-{}", step.id),
                         config: None,
                     },
                     namespace: "wasmcloud".to_string(),
@@ -258,7 +258,7 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
     // Find root nodes (no dependencies)
     for step in &pipeline.nodes {
         if step.depends_on.is_none() || step.depends_on.as_ref().unwrap().is_empty() {
-            node_depths.insert(step.name.clone(), 1);
+            node_depths.insert(step.id.clone(), 1);
         }
     }
 
@@ -269,7 +269,7 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
         for step in &pipeline.nodes {
             if let Some(depends_on) = &step.depends_on
                 && !depends_on.is_empty()
-                && !node_depths.contains_key(&step.name)
+                && !node_depths.contains_key(&step.id)
             {
                 // Check if all dependencies have been processed
                 let mut max_depth = 0;
@@ -283,7 +283,7 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
                     }
                 }
                 if all_deps_processed {
-                    node_depths.insert(step.name.clone(), max_depth + 1);
+                    node_depths.insert(step.id.clone(), max_depth + 1);
                     changed = true;
                 }
             }
@@ -294,13 +294,13 @@ fn determine_step_topics(pipeline: &Pipeline, workspace_slug: &String) -> HashMa
     for step in &pipeline.nodes {
         if let Some(depends_on) = &step.depends_on
             && !depends_on.is_empty()
-            && let Some(&depth) = node_depths.get(&step.name)
+            && let Some(&depth) = node_depths.get(&step.id)
         {
             let topic = format!(
                 "pipestack.{}.{}.step-{}-in",
                 workspace_slug, pipeline.name, depth
             );
-            step_topics.insert(step.name.clone(), topic);
+            step_topics.insert(step.id.clone(), topic);
         }
     }
     step_topics
@@ -1067,7 +1067,8 @@ spec:
             version: "1".to_string(),
             nodes: vec![
                 PipelineNode {
-                    name: "webhook-1".to_string(),
+                    id: "webhook-1".to_string(),
+                    label: "A webhook 1".to_string(),
                     step_type: PipelineNodeType::InHttpWebhook,
                     position: XYPosition { x: 100.0, y: 100.0 },
                     settings: Some(PipelineNodeSettings::InHttpWebhook(InHttpWebhookSettings {
@@ -1080,7 +1081,8 @@ spec:
                     depends_on: None,
                 },
                 PipelineNode {
-                    name: "webhook-2".to_string(),
+                    id: "webhook-2".to_string(),
+                    label: "A webhook 2".to_string(),
                     step_type: PipelineNodeType::InHttpWebhook,
                     position: XYPosition { x: 200.0, y: 100.0 },
                     settings: Some(PipelineNodeSettings::InHttpWebhook(InHttpWebhookSettings {
@@ -1093,7 +1095,8 @@ spec:
                     depends_on: None,
                 },
                 PipelineNode {
-                    name: "processor".to_string(),
+                    id: "processor".to_string(),
+                    label: "A processor".to_string(),
                     step_type: PipelineNodeType::ProcessorWasm,
                     position: XYPosition { x: 300.0, y: 100.0 },
                     settings: None,

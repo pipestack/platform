@@ -72,7 +72,7 @@ pub async fn publish_wasm_components(
     let mut failed_nodes = Vec::new();
 
     for node in wasm_nodes {
-        let node_id = &node.name;
+        let node_id = &node.id;
         info!("Processing wasm node: {}", node_id);
 
         // Construct R2 key path

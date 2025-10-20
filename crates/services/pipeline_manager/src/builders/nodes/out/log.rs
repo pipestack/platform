@@ -16,12 +16,12 @@ impl ComponentBuilder for OutLogBuilder {
 
         // Add in-internal component for out-log
         components.push(Component {
-            name: format!("in-internal-for-{}", step.name),
+            name: format!("in-internal-for-{}", step.id),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
                 id: Some(format!(
                     "{}_{}-in-internal-for-{}",
-                    context.workspace_slug, context.pipeline.name, step.name
+                    context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
                     "{}/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}",
@@ -54,7 +54,7 @@ impl ComponentBuilder for OutLogBuilder {
                         name: None,
                         source: None,
                         target: LinkTarget {
-                            name: step.name.clone(),
+                            name: step.id.clone(),
                             config: None,
                         },
                         namespace: "pipestack".to_string(),
@@ -67,12 +67,12 @@ impl ComponentBuilder for OutLogBuilder {
 
         // Add the out-log component itself
         components.push(Component {
-            name: step.name.clone(),
+            name: step.id.clone(),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
                 id: Some(format!(
                     "{}_{}-{}",
-                    context.workspace_slug, context.pipeline.name, step.name
+                    context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
                     "{}/nodes/out_log:{NODE_VERSION_OUT_LOG}",

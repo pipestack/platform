@@ -79,7 +79,6 @@ pub struct AuthenticationConfig {
     pub name: String,
     pub value: String,
     pub prefix: String,
-    pub realm: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
@@ -87,7 +86,8 @@ pub struct AuthenticationConfig {
 pub struct Authentication {
     #[serde(rename = "type")]
     pub auth_type: String,
-    pub config: AuthenticationConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<AuthenticationConfig>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
@@ -243,7 +243,8 @@ pub enum PipelineNodeSettings {
 #[derive(Debug, Deserialize, Serialize, JsonSchema, TS)]
 #[ts(export, export_to = PIPELINE_TS_FILE_PATH, optional_fields)]
 pub struct PipelineNode {
-    pub name: String,
+    pub id: String,
+    pub label: String,
     #[serde(rename = "type")]
     pub step_type: PipelineNodeType,
     #[serde(skip_serializing_if = "Option::is_none")]

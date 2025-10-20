@@ -53,41 +53,45 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
 
     // Handle authentication
     if let Some(auth) = &settings.authentication {
-        match auth.auth_type.as_str() {
-            "api_key" => {
-                if auth.config.location == "header" {
-                    let auth_value = if auth.config.prefix.is_empty() {
-                        auth.config.value.clone()
-                    } else {
-                        format!("{} {}", auth.config.prefix, auth.config.value)
-                    };
+        if let Some(config) = &auth.config {
+            match auth.auth_type.as_str() {
+                "api_key" => {
+                    if config.location == "header" {
+                        let auth_value = if config.prefix.is_empty() {
+                            config.value.clone()
+                        } else {
+                            format!("{} {}", config.prefix, config.value)
+                        };
+                        fields
+                            .set(&config.name, &[auth_value.as_bytes().to_vec()])
+                            .unwrap_or_else(|e| {
+                                error!(context: LOG_CONTEXT, "Failed to set auth header {}: {}", config.name, e);
+                            });
+                    }
+                    // Query string auth will be handled when constructing the URL
+                }
+                "bearer" => {
+                    let bearer_value = format!("Bearer {}", config.value);
                     fields
-                        .set(&auth.config.name, &[auth_value.as_bytes().to_vec()])
+                        .set("Authorization", &[bearer_value.as_bytes().to_vec()])
                         .unwrap_or_else(|e| {
-                            error!(context: LOG_CONTEXT, "Failed to set auth header {}: {}", auth.config.name, e);
+                            error!(context: LOG_CONTEXT, "Failed to set Bearer authorization header: {}", e);
                         });
                 }
-                // Query string auth will be handled when constructing the URL
+                "basic" => {
+                    let basic_value = format!("Basic {}", config.value);
+                    fields
+                        .set("Authorization", &[basic_value.as_bytes().to_vec()])
+                        .unwrap_or_else(|e| {
+                            error!(context: LOG_CONTEXT, "Failed to set Basic authorization header: {}", e);
+                        });
+                }
+                _ => {
+                    error!(context: LOG_CONTEXT, "Unsupported authentication type: {}", auth.auth_type);
+                }
             }
-            "bearer" => {
-                let bearer_value = format!("Bearer {}", auth.config.value);
-                fields
-                    .set("Authorization", &[bearer_value.as_bytes().to_vec()])
-                    .unwrap_or_else(|e| {
-                        error!(context: LOG_CONTEXT, "Failed to set Bearer authorization header: {}", e);
-                    });
-            }
-            "basic" => {
-                let basic_value = format!("Basic {}", auth.config.value);
-                fields
-                    .set("Authorization", &[basic_value.as_bytes().to_vec()])
-                    .unwrap_or_else(|e| {
-                        error!(context: LOG_CONTEXT, "Failed to set Basic authorization header: {}", e);
-                    });
-            }
-            _ => {
-                error!(context: LOG_CONTEXT, "Unsupported authentication type: {}", auth.auth_type);
-            }
+        } else {
+            error!(context: LOG_CONTEXT, "Authentication config is missing for auth type: {}", auth.auth_type);
         }
     }
 
@@ -130,18 +134,21 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
     // Handle API key authentication in query string
     if let Some(auth) = &settings.authentication
         && auth.auth_type == "api_key"
-        && auth.config.location == "query"
-    {
-        let separator = if path_with_query.contains('?') {
-            "&"
-        } else {
-            "?"
-        };
-        path_with_query = format!(
-            "{}{}{}={}",
-            path_with_query, separator, auth.config.name, auth.config.value
-        );
-    }
+        && auth
+            .config
+            .as_ref()
+            .is_some_and(|config| config.location == "query")
+        && let Some(config) = &auth.config {
+            let separator = if path_with_query.contains('?') {
+                "&"
+            } else {
+                "?"
+            };
+            path_with_query = format!(
+                "{}{}{}={}",
+                path_with_query, separator, config.name, config.value
+            );
+        }
 
     // Set Content-Type header for methods that will have a body
     if matches!(

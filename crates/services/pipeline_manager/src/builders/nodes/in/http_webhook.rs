@@ -17,12 +17,12 @@ impl ComponentBuilder for InHttpWebhookBuilder {
 
         // Add in-http component
         components.push(Component {
-            name: step.name.clone(),
+            name: step.id.clone(),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
                 id: Some(format!(
                     "{}_{}-{}",
-                    context.workspace_slug, context.pipeline.name, step.name
+                    context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
                     "{}/nodes/in_http:{NODE_VERSION_IN_HTTP}",
@@ -30,7 +30,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                 ),
                 config: step.settings.as_ref().map(|s| match s {
                     PipelineNodeSettings::InHttpWebhook(settings) => vec![Config {
-                        name: format!("{}-config-v{}", step.name, context.pipeline.version),
+                        name: format!("{}-config-v{}", step.id, context.pipeline.version),
                         properties: settings_to_config_properties(settings),
                     }],
                     _ => vec![],
@@ -49,7 +49,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                         name: None,
                         source: None,
                         target: LinkTarget {
-                            name: format!("out-internal-for-{}", step.name),
+                            name: format!("out-internal-for-{}", step.id),
                             config: None,
                         },
                         namespace: "pipestack".to_string(),
@@ -61,16 +61,16 @@ impl ComponentBuilder for InHttpWebhookBuilder {
         });
 
         // Add corresponding out-internal component
-        let next_topic = context.find_next_step_topic(&step.name).unwrap_or_default();
+        let next_topic = context.find_next_step_topic(&step.id).unwrap_or_default();
 
         if !next_topic.is_empty() {
             components.push(Component {
-                name: format!("out-internal-for-{}", step.name),
+                name: format!("out-internal-for-{}", step.id),
                 component_type: "component".to_string(),
                 properties: Properties::WithImage {
                     id: Some(format!(
                         "{}_{}-out-internal-for-{}",
-                        context.workspace_slug, context.pipeline.name, step.name
+                        context.workspace_slug, context.pipeline.name, step.id
                     )),
                     image: format!(
                         "{}/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}",
@@ -79,7 +79,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                     config: Some(vec![Config {
                         name: format!(
                             "out-internal-for-{}-config-v{}",
-                            step.name, context.pipeline.version
+                            step.id, context.pipeline.version
                         ),
                         properties: {
                             let mut props = std::collections::BTreeMap::new();

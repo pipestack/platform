@@ -16,12 +16,12 @@ impl ComponentBuilder for ProcessorWasmBuilder {
 
         // Add in-internal component for processor
         components.push(Component {
-            name: format!("in-internal-for-{}", step.name),
+            name: format!("in-internal-for-{}", step.id),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
                 id: Some(format!(
                     "{}_{}-in-internal-for-{}",
-                    context.workspace_slug, context.pipeline.name, step.name
+                    context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
                     "{}/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}",
@@ -40,7 +40,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                         name: None,
                         source: None,
                         target: LinkTarget {
-                            name: step.name.clone(),
+                            name: step.id.clone(),
                             config: None,
                         },
                         namespace: "pipestack".to_string(),
@@ -54,7 +54,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                         name: None,
                         source: None,
                         target: LinkTarget {
-                            name: format!("out-internal-for-{}", step.name),
+                            name: format!("out-internal-for-{}", step.id),
                             config: None,
                         },
                         namespace: "pipestack".to_string(),
@@ -67,12 +67,12 @@ impl ComponentBuilder for ProcessorWasmBuilder {
 
         // Add the processor component itself
         components.push(Component {
-            name: step.name.clone(),
+            name: step.id.clone(),
             component_type: "component".to_string(),
             properties: Properties::WithImage {
                 id: Some(format!(
                     "{}_{}-{}",
-                    context.workspace_slug, context.pipeline.name, step.name
+                    context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
                     "{}/{}/pipeline/{}/{}/builder/components/nodes/processor/wasm/{}:1.0.0",
@@ -80,7 +80,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                     context.workspace_slug,
                     context.pipeline.name,
                     context.pipeline.version,
-                    step.name
+                    step.id
                 ),
                 config: None,
             },
@@ -93,16 +93,16 @@ impl ComponentBuilder for ProcessorWasmBuilder {
         });
 
         // Add out-internal component for processor
-        let next_topic = context.find_next_step_topic(&step.name).unwrap_or_default();
+        let next_topic = context.find_next_step_topic(&step.id).unwrap_or_default();
 
         if !next_topic.is_empty() {
             components.push(Component {
-                name: format!("out-internal-for-{}", step.name),
+                name: format!("out-internal-for-{}", step.id),
                 component_type: "component".to_string(),
                 properties: Properties::WithImage {
                     id: Some(format!(
                         "{}_{}-out-internal-for-{}",
-                        context.workspace_slug, context.pipeline.name, step.name
+                        context.workspace_slug, context.pipeline.name, step.id
                     )),
                     image: format!(
                         "{}/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}",
@@ -111,7 +111,7 @@ impl ComponentBuilder for ProcessorWasmBuilder {
                     config: Some(vec![Config {
                         name: format!(
                             "out-internal-for-{}-config-v{}",
-                            step.name, context.pipeline.version
+                            step.id, context.pipeline.version
                         ),
                         properties: {
                             let mut props = std::collections::BTreeMap::new();
