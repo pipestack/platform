@@ -21,30 +21,6 @@ pub struct NatsCredentials {
 }
 
 #[derive(Debug, Clone)]
-pub struct NatsAccountConfig {
-    pub workspace_slug: String,
-    // pub max_connections: Option<i64>,
-    // pub max_data: Option<i64>,
-    // pub max_exports: Option<i64>,
-    // pub max_imports: Option<i64>,
-    // pub max_subscriptions: Option<i64>,
-    // pub tiered_limits: Option<NatsAccountTieredLimits>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NatsAccountTieredLimits {
-    pub r1: NatsJetStreamLimits,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NatsJetStreamLimits {
-    pub mem_storage: i64,
-    pub disk_storage: i64,
-    pub streams: i64,
-    pub consumer: i64,
-}
-
-#[derive(Debug, Clone)]
 pub struct NatsUserConfig {
     pub name: String,
     pub max_subscriptions: Option<i64>,
@@ -81,13 +57,10 @@ impl NatsManager {
     /// Create a new NATS account for a workspace and update the resolver
     pub async fn create_account(
         &self,
-        config: NatsAccountConfig,
+        workspace_slug: &str,
         pool: &PgPool,
     ) -> Result<(String, String)> {
-        info!(
-            "Creating NATS account for workspace: {}",
-            config.workspace_slug
-        );
+        info!("Creating NATS account for workspace: {}", workspace_slug);
 
         let account_keypair = KeyPair::new_account();
         let account_signing_key = KeyPair::new_account();
@@ -112,7 +85,7 @@ impl NatsManager {
         let imports = Some(Imports(vec![Import {
             account: Some(self.pipestack_account_keypair.public_key()),
             local_subject: Some(RenamingSubject("wadm.api.>".to_string())),
-            name: Some(format!("{}.wadm.api.>", config.workspace_slug)),
+            name: Some(format!("{}.wadm.api.>", workspace_slug)),
             subject: Some(Subject(format!(
                 "{}.wadm.api.>",
                 account_keypair.public_key()
@@ -143,7 +116,7 @@ impl NatsManager {
             .try_into()
             .expect("Account to be valid");
         let account_jwt = Token::new(account_keypair.public_key())
-            .name(format!("{}_account", config.workspace_slug))
+            .name(format!("{}_account", workspace_slug))
             .claims(account)
             .sign(&self.operator_keypair);
 
@@ -151,20 +124,20 @@ impl NatsManager {
         self.update_account_resolver(&account_jwt).await?;
 
         // Update pipestack_account with import from this workspace account
-        self.update_pipestack_account_import(&config.workspace_slug, &account_keypair.public_key())
+        self.update_pipestack_account_import(workspace_slug, &account_keypair.public_key())
             .await?;
 
         // Persist the account's public key in the workspace database
         crate::database::update_workspace_nats_account(
             pool,
-            &config.workspace_slug,
+            workspace_slug,
             &account_keypair.public_key(),
         )
         .await?;
 
         info!(
             "Successfully created NATS account for workspace: {}",
-            config.workspace_slug
+            workspace_slug
         );
 
         Ok((account_keypair.seed()?, account_jwt))
@@ -248,26 +221,8 @@ impl NatsManager {
             workspace_slug
         );
 
-        // Create account configuration
-        let account_config = NatsAccountConfig {
-            workspace_slug: workspace_slug.to_string(),
-            // max_connections: Some(-1),
-            // max_data: Some(-1),
-            // max_exports: Some(-1),
-            // max_imports: Some(-1),
-            // max_subscriptions: Some(-1),
-            // tiered_limits: Some(NatsAccountTieredLimits {
-            //     r1: NatsJetStreamLimits {
-            //         mem_storage: -1,
-            //         disk_storage: -1,
-            //         streams: -1,
-            //         consumer: -1,
-            //     },
-            // }),
-        };
-
         // Create account (will automatically update the resolver)
-        let (account_seed, account_jwt) = self.create_account(account_config, pool).await?;
+        let (account_seed, account_jwt) = self.create_account(workspace_slug, pool).await?;
         let account_keypair = KeyPair::from_seed(&account_seed)?;
 
         // Create user configuration
