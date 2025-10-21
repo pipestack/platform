@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_expired_token() {
-        let validator = JwtValidator::default();
+        let validator = JwtValidator::new(true, 10);
         let expired_time = chrono::Utc::now().timestamp() - 3600; // 1 hour ago
         let token = create_test_jwt_payload(Some(expired_time), Some("test-component"));
 

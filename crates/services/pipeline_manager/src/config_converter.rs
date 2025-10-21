@@ -61,7 +61,7 @@ pub fn convert_pipeline(
                     source: Some(LinkSource {
                         config: Some(vec![Config {
                             name: format!(
-                                "{}-{}-httpserver-path-config-{}-v{}",
+                                "{}-{}-httpserver-path-{}-config-v{}",
                                 workspace_slug, pipeline.name, path, pipeline.version
                             ),
                             properties: {
@@ -358,12 +358,19 @@ mod tests {
 name: mine
 version: 1
 nodes:
-  - name: in-http-webhook_17
+  - id: in-http-webhook_17
+    label: in-http-webhook_17
     type: in-http-webhook
     position:
       x: 300
       'y': 180
-  - name: processor-wasm_18
+    settings:
+      type: in-http-webhook
+      settings:
+        method: GET
+        path: 'in-http-webhook_17'
+  - id: processor-wasm_18
+    label: processor-wasm_18
     type: processor-wasm
     position:
       x: 548
@@ -372,7 +379,8 @@ nodes:
     instances: 10000
     depends_on:
       - in-http-webhook_17
-  - name: out-log_19
+  - id: out-log_19
+    label: out-log_19
     type: out-log
     position:
       x: 660
@@ -395,6 +403,10 @@ spec:
     properties:
       image: http://localhost:5000/nodes/in_http:{NODE_VERSION_IN_HTTP}
       id: default_mine-in-http-webhook_17
+      config:
+        - name: in-http-webhook_17-config-v1
+          properties:
+            json: '{{"method":"GET","path":"in-http-webhook_17"}}'
     traits:
     - type: spreadscaler
       properties:
@@ -532,9 +544,9 @@ spec:
         - incoming-handler
         source:
           config:
-          - name: default-mine-httpserver-path-config-v1
+          - name: default-mine-httpserver-path-in-http-webhook_17-config-v1
             properties:
-              path: /mine
+              path: /mine/in-http-webhook_17
         target:
           name: in-http-webhook_17
         name: httpserver-to-default-in-http-webhook_17-link
@@ -602,12 +614,19 @@ spec:
 name: mine
 version: 1
 nodes:
-  - name: in-http-webhook_17
+  - id: in-http-webhook_17
+    label: in-http-webhook_17
     type: in-http-webhook
     position:
       x: 300
       'y': 180
-  - name: processor-wasm_18
+    settings:
+      type: in-http-webhook
+      settings:
+        method: GET
+        path: 'in-http-webhook_17'
+  - id: processor-wasm_18
+    label: processor-wasm_18
     type: processor-wasm
     position:
       x: 548
@@ -616,14 +635,16 @@ nodes:
     instances: 10000
     depends_on:
       - in-http-webhook_17
-  - name: out-log_19
+  - id: out-log_19
+    label: out-log_19
     type: out-log
     position:
       x: 660
       'y': 180
     depends_on:
       - processor-wasm_18
-  - name: out-log_20
+  - id: out-log_20
+    label: out-log_20
     type: out-log
     position:
       x: 960
@@ -646,6 +667,10 @@ spec:
     properties:
       image: http://localhost:5000/nodes/in_http:{NODE_VERSION_IN_HTTP}
       id: default_mine-in-http-webhook_17
+      config:
+        - name: in-http-webhook_17-config-v1
+          properties:
+            json: '{{"method":"GET","path":"in-http-webhook_17"}}'
     traits:
     - type: spreadscaler
       properties:
@@ -817,9 +842,9 @@ spec:
         - incoming-handler
         source:
           config:
-          - name: default-mine-httpserver-path-config-v1
+          - name: default-mine-httpserver-path-in-http-webhook_17-config-v1
             properties:
-              path: /mine
+              path: /mine/in-http-webhook_17
         target:
           name: in-http-webhook_17
         name: httpserver-to-default-in-http-webhook_17-link

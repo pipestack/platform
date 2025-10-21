@@ -138,17 +138,18 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
             .config
             .as_ref()
             .is_some_and(|config| config.location == "query")
-        && let Some(config) = &auth.config {
-            let separator = if path_with_query.contains('?') {
-                "&"
-            } else {
-                "?"
-            };
-            path_with_query = format!(
-                "{}{}{}={}",
-                path_with_query, separator, config.name, config.value
-            );
-        }
+        && let Some(config) = &auth.config
+    {
+        let separator = if path_with_query.contains('?') {
+            "&"
+        } else {
+            "?"
+        };
+        path_with_query = format!(
+            "{}{}{}={}",
+            path_with_query, separator, config.name, config.value
+        );
+    }
 
     // Set Content-Type header for methods that will have a body
     if matches!(
