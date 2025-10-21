@@ -1161,15 +1161,15 @@ spec:
             );
 
             // Check the path configuration
-            if let Some(source) = &link_props.source {
-                if let Some(config) = &source.config {
-                    assert_eq!(config.len(), 1);
-                    let path_value = config[0].properties.get("path").unwrap();
-                    assert_eq!(
-                        path_value,
-                        &serde_yaml::Value::String("/multi-http/api/webhook1".to_string())
-                    );
-                }
+            if let Some(source) = &link_props.source
+                && let Some(config) = &source.config
+            {
+                assert_eq!(config.len(), 1);
+                let path_value = config[0].properties.get("path").unwrap();
+                assert_eq!(
+                    path_value,
+                    &serde_yaml::Value::String("/multi-http/api/webhook1".to_string())
+                );
             }
         }
 
@@ -1184,15 +1184,15 @@ spec:
             );
 
             // Check the path configuration
-            if let Some(source) = &link_props.source {
-                if let Some(config) = &source.config {
-                    assert_eq!(config.len(), 1);
-                    let path_value = config[0].properties.get("path").unwrap();
-                    assert_eq!(
-                        path_value,
-                        &serde_yaml::Value::String("/multi-http/api/webhook2".to_string())
-                    );
-                }
+            if let Some(source) = &link_props.source
+                && let Some(config) = &source.config
+            {
+                assert_eq!(config.len(), 1);
+                let path_value = config[0].properties.get("path").unwrap();
+                assert_eq!(
+                    path_value,
+                    &serde_yaml::Value::String("/multi-http/api/webhook2".to_string())
+                );
             }
         }
     }
