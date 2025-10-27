@@ -1,7 +1,7 @@
 use crate::builders::{
     BuildContext, Component, ComponentBuilder, Config, LinkProperties, LinkTarget, Properties,
-    Trait, TraitProperties, nodes::NODE_VERSION_IN_HTTP, nodes::NODE_VERSION_OUT_INTERNAL,
-    settings_to_config_properties,
+    Trait, TraitProperties, nodes::NODE_IN_HTTP_NAME, nodes::NODE_IN_HTTP_VERSION,
+    nodes::NODE_OUT_INTERNAL_NAME, nodes::NODE_OUT_INTERNAL_VERSION, settings_to_config_properties,
 };
 use shared::{PipelineNode, PipelineNodeSettings};
 
@@ -25,7 +25,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                     context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
-                    "{}/nodes/in_http:{NODE_VERSION_IN_HTTP}",
+                    "{}/nodes/{NODE_IN_HTTP_NAME}:{NODE_IN_HTTP_VERSION}",
                     context.app_config.registry.url
                 ),
                 config: step.settings.as_ref().map(|s| match s {
@@ -73,7 +73,7 @@ impl ComponentBuilder for InHttpWebhookBuilder {
                         context.workspace_slug, context.pipeline.name, step.id
                     )),
                     image: format!(
-                        "{}/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}",
+                        "{}/nodes/{NODE_OUT_INTERNAL_NAME}:{NODE_OUT_INTERNAL_VERSION}",
                         context.app_config.registry.url
                     ),
                     config: Some(vec![Config {

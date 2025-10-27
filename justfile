@@ -33,16 +33,16 @@ wash-push-all:
 wash-push-one node: (wash-run-one node "build")
     #!/usr/bin/env bash
     if [ -d "crates/nodes/{{node}}" ]; then
-        crate_name=$(basename "{{node}}" | sed 's/-/_/g')
-        if [ "$crate_name" = "customer" ] || [ "$crate_name" = "out" ]; then
-            echo "⏭️  Skipping excluded crate: $crate_name"
+        package_name=$(basename "{{node}}" | sed 's/-/_/g')
+        if [ "$package_name" = "customer" ] || [ "$package_name" = "out" ]; then
+        echo "⏭️  Skipping excluded crate: $package_name"
             continue
         fi
-        wasm_file="${crate_name//-/_}_s.wasm"
-        echo "📦 Pushing $crate_name to registry..."
+        wasm_file="${package_name//-/_}_s.wasm"
+        echo "📦 Pushing $wasm_file to registry..."
         cd "crates/nodes/{{node}}"
         version=$(grep '^version' Cargo.toml | cut -d'"' -f2)
-        wash push --insecure localhost:5000/nodes/${crate_name}:${version} ./build/${wasm_file}
+        wash push --insecure localhost:5000/nodes/${wasm_file}:${version} ./build/${wasm_file}
         cd - > /dev/null
     fi
 
