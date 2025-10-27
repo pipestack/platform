@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.21.2"; # Also update .github/workflows/prepare-release.yaml and .github/workflows/release.yaml
+        version = "0.21.3"; # Also update .github/workflows/prepare-release.yaml and .github/workflows/release.yaml
 
         # Map Nix system to Knope's naming convention
         platformMap = {
