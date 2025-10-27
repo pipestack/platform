@@ -1,7 +1,7 @@
 use bindings::exports::pipestack::out::out::Guest;
 
 use bindings::wasmcloud::messaging::{consumer, types};
-use wasmcloud_component::{error, info};
+use wasmcloud_component::{error, trace};
 
 mod bindings {
     use super::Component;
@@ -26,9 +26,9 @@ impl Guest for Component {
         }) {
             error!(context: LOG_CONTEXT, "Failed to publish message: {err:?}");
         } else {
-            info!(context: LOG_CONTEXT, "Successfully posted a message to subject: {subject:?}");
+            trace!(context: LOG_CONTEXT, "Successfully posted a message to subject: {subject:?}");
         }
 
-        "Done".to_string()
+        "OK".to_string()
     }
 }

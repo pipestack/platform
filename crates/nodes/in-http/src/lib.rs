@@ -1,4 +1,5 @@
 use shared::{FromConfig, InHttpWebhookSettings};
+use std::io::Read;
 use wasmcloud_component::{
     error,
     http::{self, ErrorCode, Response, StatusCode},
@@ -18,7 +19,7 @@ const LOG_CONTEXT: &str = "in-http";
 
 impl http::Server for Component {
     fn handle(
-        request: http::IncomingRequest,
+        mut request: http::IncomingRequest,
     ) -> http::Result<http::Response<impl http::OutgoingBody>> {
         let config = match bindings::wasi::config::runtime::get("json") {
             Ok(config) => config,
@@ -48,20 +49,22 @@ impl http::Server for Component {
                 });
         }
 
-        let message = request
-            .uri()
-            .query()
-            .and_then(|query| {
-                query.split('&').find_map(|param| {
-                    let mut parts = param.split('=');
-                    match (parts.next(), parts.next()) {
-                        (Some("message"), Some(value)) => Some(value),
-                        _ => None,
+        let message = match request.method().to_string().to_uppercase().as_str() {
+            "POST" | "PUT" | "PATCH" => {
+                let mut body = String::new();
+                match request.body_mut().read_to_string(&mut body) {
+                    Ok(_) => body,
+                    Err(_e) => {
+                        return Ok(http::Response::new(
+                            "Failed to read request body\n".to_string(),
+                        ));
                     }
-                })
-            })
-            .unwrap_or("default message");
-        let received = bindings::pipestack::out::out::run(message);
+                }
+            }
+            _ => "{}".to_string(),
+        };
+
+        let received = bindings::pipestack::out::out::run(message.as_str());
         Ok(http::Response::new(format!("{received}\n")))
     }
 }

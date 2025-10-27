@@ -1,7 +1,6 @@
 package pipestack:in-internal@0.1.0;
 
 world component {
-    // import wasi:config/runtime@0.2.0-draft;
     import wasi:logging/logging@0.1.0-draft;
     import pipestack:customer/customer@0.1.0;
     import pipestack:out/out@0.1.0;

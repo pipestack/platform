@@ -10,3 +10,4 @@ crate-type = ["cdylib"]
 shared = { path = "../../shared" , version = "0.1.3" }
 wasmcloud-component.workspace = true
 wit-bindgen.workspace = true
+serde_json.workspace = true

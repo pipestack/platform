@@ -2731,6 +2731,7 @@ dependencies = [
 name = "in-http"
 version = "0.1.6"
 dependencies = [
+ "serde_json",
  "shared",
  "wasmcloud-component",
  "wit-bindgen 0.43.0",
