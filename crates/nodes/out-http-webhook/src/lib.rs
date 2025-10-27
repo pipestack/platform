@@ -187,8 +187,17 @@ fn make_http_request(input: &str, settings: &OutHttpWebhookSettings) -> Result<S
         let body = req.body().unwrap();
         let output_stream = body.write().unwrap();
 
-        // Create JSON payload with the input
-        let payload = format!(r#"{{"data": "{}"}}"#, input.replace('"', r#"\""#));
+        // Create JSON payload with the input as a JSON object
+        let data_value: serde_json::Value = match serde_json::from_str(input) {
+            Ok(json) => json,
+            Err(_) => serde_json::Value::String(input.to_string()),
+        };
+
+        let payload_obj = serde_json::json!({
+            "data": data_value
+        });
+
+        let payload = payload_obj.to_string();
         output_stream
             .blocking_write_and_flush(payload.as_bytes())
             .unwrap_or_else(|e| {

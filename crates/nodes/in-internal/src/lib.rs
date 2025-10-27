@@ -1,5 +1,5 @@
 use bindings::{exports::wasmcloud::messaging, wasmcloud::messaging::types::BrokerMessage};
-use wasmcloud_component::info;
+use wasmcloud_component::{error, info, trace};
 
 mod bindings {
     use super::WitComponent;
@@ -17,16 +17,23 @@ impl messaging::handler::Guest for WitComponent {
             "Message received in in-internal: {:?}",
             String::from_utf8(msg.body.clone())
         );
-
         let response_from_custom_code = match bindings::pipestack::customer::customer::run(
             String::from_utf8(msg.body.clone()).unwrap().as_str(),
         ) {
-            Ok(res) => {
-                info!("Called customer code: {res}");
+            Ok(Ok(res)) => {
+                info!(context: LOG_CONTEXT,"Called customer code: {res}");
                 res
             }
-            // Err(err) => error!("Failed to execute the customer code: {err:?}"),
-            Err(_) => String::from_utf8(msg.body.clone()).unwrap(),
+            Ok(Err(err)) => {
+                error!(context: LOG_CONTEXT,
+                    "Error calling customer code: {err:?}. Using original message as fallback."
+                );
+                return Err(format!("{err:?}"));
+            }
+            Err(_err) => {
+                trace!(context: LOG_CONTEXT, "AAA   Custom code not linked, using original message. This is expected for in-internal nodes that are not linking to a processor-* component.");
+                String::from_utf8(msg.body.clone()).unwrap()
+            }
         };
 
         info!(context: LOG_CONTEXT,"Calling out");

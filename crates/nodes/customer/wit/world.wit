@@ -2,11 +2,28 @@ package pipestack:customer@0.1.0;
 
 interface customer {
     use wrpc:rpc/error@0.1.0.{error};
-    run: func(input: string) -> result<string, error>;
+
+    variant run-error {
+        app-error(string),
+        error,
+    }
+
+    record context {
+        code: string,
+        message: string,
+        details: option<string>,
+    }
+
+    variant node-error {
+        processing-error(context)
+    }
+
+    run: func(input: string) -> result<result<string, run-error>, error>;
 }
 
 world component {
     import wasi:config/runtime@0.2.0-draft;
+    import wasi:logging/logging@0.1.0-draft;
 
     export customer;
 }

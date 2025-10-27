@@ -24,7 +24,7 @@
   "env": {
     "WASMCLOUD_OBSERVABILITY_ENABLED": "true",
     "OTEL_TRACES_EXPORTER":            "otlp",
-    "WASMCLOUD_VERSION":               "1.8.0",
+    "WASMCLOUD_VERSION":               "1.9.0",
     "WASMCLOUD_SECRETS_TOPIC":         "wasmcloud.secrets",
     "OTEL_EXPORTER_OTLP_ENDPOINT":     "http://127.0.0.1:4318",
     "WASMCLOUD_OCI_ALLOWED_INSECURE":  "localhost:5000",
