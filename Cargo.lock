@@ -3819,7 +3819,7 @@ dependencies = [
 
 [[package]]
 name = "out-log"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "wasmcloud-component",
  "wit-bindgen 0.43.0",
