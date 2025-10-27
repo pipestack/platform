@@ -1,3 +1,9 @@
+## 0.1.7 (2025-10-27)
+
+### Features
+
+- Release with the _s name
+
 ## 0.1.6 (2025-10-04)
 
 ### Fixes
