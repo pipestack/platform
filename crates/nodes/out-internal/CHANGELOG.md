@@ -1,3 +1,9 @@
+## 0.1.7 (2025-10-27)
+
+### Features
+
+- Default to JSON data as a means of transportation
+
 ## 0.1.6 (2025-10-04)
 
 ### Fixes
