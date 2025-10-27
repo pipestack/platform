@@ -13,7 +13,7 @@ const LOG_CONTEXT: &str = "out-internal";
 
 impl Guest for Component {
     fn run(input: String) -> String {
-        info!(context: LOG_CONTEXT, "Final log message: {input}");
-        String::from("Done")
+        info!(context: LOG_CONTEXT, "{input}");
+        String::from("OK")
     }
 }
