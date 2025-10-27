@@ -1,3 +1,9 @@
+## 0.1.8 (2025-10-27)
+
+### Fixes
+
+- Clean up logging output
+
 ## 0.1.7 (2025-10-27)
 
 ### Features
