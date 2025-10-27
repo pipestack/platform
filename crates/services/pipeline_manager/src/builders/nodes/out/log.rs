@@ -1,6 +1,7 @@
 use crate::builders::{
     BuildContext, Component, ComponentBuilder, LinkProperties, LinkTarget, Properties, Trait,
-    TraitProperties, nodes::NODE_VERSION_IN_INTERNAL, nodes::NODE_VERSION_OUT_LOG,
+    TraitProperties, nodes::NODE_IN_INTERNAL_NAME, nodes::NODE_IN_INTERNAL_VERSION,
+    nodes::NODE_OUT_LOG_NAME, nodes::NODE_OUT_LOG_VERSION,
 };
 use shared::PipelineNode;
 
@@ -24,7 +25,7 @@ impl ComponentBuilder for OutLogBuilder {
                     context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
-                    "{}/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}",
+                    "{}/nodes/{NODE_IN_INTERNAL_NAME}:{NODE_IN_INTERNAL_VERSION}",
                     context.app_config.registry.url
                 ),
                 config: None,
@@ -75,7 +76,7 @@ impl ComponentBuilder for OutLogBuilder {
                     context.workspace_slug, context.pipeline.name, step.id
                 )),
                 image: format!(
-                    "{}/nodes/out_log:{NODE_VERSION_OUT_LOG}",
+                    "{}/nodes/{NODE_OUT_LOG_NAME}:{NODE_OUT_LOG_VERSION}",
                     context.app_config.registry.url
                 ),
                 config: None,

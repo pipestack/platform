@@ -348,8 +348,8 @@ pub fn create_providers_wadm(workspace_slug: &str, app_config: &AppConfig) -> Wa
 mod tests {
     use super::*;
     use crate::builders::nodes::{
-        NODE_VERSION_IN_HTTP, NODE_VERSION_IN_INTERNAL, NODE_VERSION_OUT_INTERNAL,
-        NODE_VERSION_OUT_LOG,
+        NODE_IN_HTTP_NAME, NODE_IN_HTTP_VERSION, NODE_IN_INTERNAL_NAME, NODE_IN_INTERNAL_VERSION,
+        NODE_OUT_INTERNAL_NAME, NODE_OUT_INTERNAL_VERSION, NODE_OUT_LOG_NAME, NODE_OUT_LOG_VERSION,
     };
 
     #[test]
@@ -401,7 +401,7 @@ spec:
   - name: in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/in_http:{NODE_VERSION_IN_HTTP}
+      image: http://localhost:5000/nodes/{NODE_IN_HTTP_NAME}:{NODE_IN_HTTP_VERSION}
       id: default_mine-in-http-webhook_17
       config:
         - name: in-http-webhook_17-config-v1
@@ -422,7 +422,7 @@ spec:
   - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_OUT_INTERNAL_NAME}:{NODE_OUT_INTERNAL_VERSION}
       id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
@@ -443,7 +443,7 @@ spec:
   - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_IN_INTERNAL_NAME}:{NODE_IN_INTERNAL_VERSION}
       id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
@@ -477,7 +477,7 @@ spec:
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_OUT_INTERNAL_NAME}:{NODE_OUT_INTERNAL_VERSION}
       id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
@@ -498,7 +498,7 @@ spec:
   - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_IN_INTERNAL_NAME}:{NODE_IN_INTERNAL_VERSION}
       id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
@@ -523,7 +523,7 @@ spec:
   - name: out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/out_log:{NODE_VERSION_OUT_LOG}
+      image: http://localhost:5000/nodes/{NODE_OUT_LOG_NAME}:{NODE_OUT_LOG_VERSION}
       id: default_mine-out-log_19
     traits:
     - type: spreadscaler
@@ -665,7 +665,7 @@ spec:
   - name: in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/in_http:{NODE_VERSION_IN_HTTP}
+      image: http://localhost:5000/nodes/{NODE_IN_HTTP_NAME}:{NODE_IN_HTTP_VERSION}
       id: default_mine-in-http-webhook_17
       config:
         - name: in-http-webhook_17-config-v1
@@ -686,7 +686,7 @@ spec:
   - name: out-internal-for-in-http-webhook_17
     type: component
     properties:
-      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_OUT_INTERNAL_NAME}:{NODE_OUT_INTERNAL_VERSION}
       id: default_mine-out-internal-for-in-http-webhook_17
       config:
       - name: out-internal-for-in-http-webhook_17-config-v1
@@ -707,7 +707,7 @@ spec:
   - name: in-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_IN_INTERNAL_NAME}:{NODE_IN_INTERNAL_VERSION}
       id: default_mine-in-internal-for-processor-wasm_18
     traits:
     - type: spreadscaler
@@ -741,7 +741,7 @@ spec:
   - name: out-internal-for-processor-wasm_18
     type: component
     properties:
-      image: http://localhost:5000/nodes/out_internal:{NODE_VERSION_OUT_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_OUT_INTERNAL_NAME}:{NODE_OUT_INTERNAL_VERSION}
       id: default_mine-out-internal-for-processor-wasm_18
       config:
       - name: out-internal-for-processor-wasm_18-config-v1
@@ -762,7 +762,7 @@ spec:
   - name: in-internal-for-out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_IN_INTERNAL_NAME}:{NODE_IN_INTERNAL_VERSION}
       id: default_mine-in-internal-for-out-log_19
     traits:
     - type: spreadscaler
@@ -787,7 +787,7 @@ spec:
   - name: out-log_19
     type: component
     properties:
-      image: http://localhost:5000/nodes/out_log:{NODE_VERSION_OUT_LOG}
+      image: http://localhost:5000/nodes/{NODE_OUT_LOG_NAME}:{NODE_OUT_LOG_VERSION}
       id: default_mine-out-log_19
     traits:
     - type: spreadscaler
@@ -796,7 +796,7 @@ spec:
   - name: in-internal-for-out-log_20
     type: component
     properties:
-      image: http://localhost:5000/nodes/in_internal:{NODE_VERSION_IN_INTERNAL}
+      image: http://localhost:5000/nodes/{NODE_IN_INTERNAL_NAME}:{NODE_IN_INTERNAL_VERSION}
       id: default_mine-in-internal-for-out-log_20
     traits:
     - type: spreadscaler
@@ -821,7 +821,7 @@ spec:
   - name: out-log_20
     type: component
     properties:
-      image: http://localhost:5000/nodes/out_log:{NODE_VERSION_OUT_LOG}
+      image: http://localhost:5000/nodes/{NODE_OUT_LOG_NAME}:{NODE_OUT_LOG_VERSION}
       id: default_mine-out-log_20
     traits:
     - type: spreadscaler
