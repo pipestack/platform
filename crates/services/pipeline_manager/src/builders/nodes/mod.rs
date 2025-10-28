@@ -12,4 +12,4 @@ pub const NODE_OUT_HTTP_WEBHOOK_VERSION: &str = "0.1.7";
 pub const NODE_OUT_INTERNAL_NAME: &str = "out_internal_s.wasm";
 pub const NODE_OUT_INTERNAL_VERSION: &str = "0.1.7";
 pub const NODE_OUT_LOG_NAME: &str = "out_log_s.wasm";
-pub const NODE_OUT_LOG_VERSION: &str = "0.1.8";
+pub const NODE_OUT_LOG_VERSION: &str = "0.1.9";
