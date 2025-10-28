@@ -1,3 +1,9 @@
+## 0.1.9 (2025-10-28)
+
+### Fixes
+
+- Released failed, this is another attempt
+
 ## 0.1.8 (2025-10-27)
 
 ### Fixes
